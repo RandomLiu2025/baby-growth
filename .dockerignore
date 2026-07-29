@@ -1,0 +1,8 @@
+**/__pycache__/
+**/*.pyc
+server/.venv/
+server/venv/
+server/data/
+.git/
+*.zip
+demo/

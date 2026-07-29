@@ -1,0 +1,32 @@
+# Caddy 反向代理 + 自动 HTTPS
+# SITE_ADDRESS 由 .env 提供：填域名（如 baby.example.com）即自动申请 Let's Encrypt 证书；
+# 未设置时默认 localhost（本地自签证书）。
+#
+# 全局服务器超时：给大文件上传/慢处理留足时间
+{
+	servers {
+		timeouts {
+			read_body 10m
+			read_header 1m
+			write 10m
+			idle 5m
+		}
+	}
+}
+
+{$SITE_ADDRESS:localhost} {
+	encode zstd gzip
+
+	# 允许较大照片/视频上传（Cloudflare 免费版 100s 上限由前端分批+压缩解决）
+	request_body {
+		max_size 200MB
+	}
+
+	# 反向代理到 app:8000
+	reverse_proxy app:8000 {
+		transport http {
+			dial_timeout 10s
+			response_header_timeout 5m
+		}
+	}
+}

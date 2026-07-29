@@ -1,0 +1,1877 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>宝贝成长记 · Baby Growth</title>
+<link id="favicon" rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20100%20100%27%3E%3Ctext%20y%3D%27.9em%27%20font-size%3D%2790%27%3E%F0%9F%8D%BC%3C%2Ftext%3E%3C%2Fsvg%3E"/>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Baloo+2:wght@500;600;700&family=Caveat:wght@500;600;700&family=Ma+Shan+Zheng&display=swap" rel="stylesheet" />
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+:root{
+  --c-primary:#ef8fa4; --c-primary-d:#e06e88; --c-primary-strong:#cf5f7d; --c-secondary:#7fc8d4; --c-secondary-d:#3f8f9c; --c-accent:#ffca7a;
+  --c-bg:#fff7f4; --c-bg2:#ffffff; --c-ink:#4b4a5a; --c-muted:#726d81; --c-line:#f0e3dd;
+  --deco-opacity:0.5; --radius:22px; --shadow:0 10px 30px rgba(224,110,136,.12); --shadow-sm:0 4px 14px rgba(0,0,0,.06);
+  --maxw:1160px; --font: "Quicksand","Baloo 2","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:var(--font);color:var(--c-ink);background:var(--c-bg);line-height:1.65;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+img{max-width:100%;display:block}
+input,textarea,select{font-family:inherit;font-size:1rem}
+h1,h2,h3,h4{font-family:"Baloo 2","Quicksand","PingFang SC",sans-serif;line-height:1.25;color:#3f3d4e}
+.container{max-width:var(--maxw);margin:0 auto;padding:0 6%}
+.section{padding:64px 0}
+.section-title{font-size:1.9rem;margin-bottom:6px;display:flex;align-items:center;gap:10px}
+.section-sub{color:var(--c-muted);margin-bottom:34px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:11px 22px;border-radius:999px;background:var(--c-primary-strong);color:#fff;font-weight:600;transition:.25s;box-shadow:0 6px 16px rgba(207,95,125,.32)}
+.btn:hover{filter:brightness(.94);transform:translateY(-2px)}
+.btn.ghost{background:#fff;color:var(--c-primary-d);box-shadow:var(--shadow-sm);border:1.5px solid var(--c-line)}
+.btn.sm{padding:7px 15px;font-size:.86rem}
+.btn.gray{background:#eee7f0;color:#6a6780;box-shadow:none}
+.btn.danger{background:#f2787a}
+.tag{display:inline-block;padding:3px 12px;border-radius:999px;background:rgba(127,200,212,.18);color:#3f8f9c;font-size:.78rem;font-weight:600}
+.card{background:var(--c-bg2);border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid rgba(240,227,221,.7)}
+.grid{display:grid;gap:22px}
+.reveal{opacity:0;transform:translateY(28px);transition:.7s cubic-bezier(.2,.7,.2,1)}
+.reveal.in{opacity:1;transform:none}
+
+/* ===== decorations ===== */
+#deco{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;opacity:var(--deco-opacity)}
+#deco span{position:absolute;font-size:2rem;animation:float 12s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-26px) rotate(8deg)}}
+#app{position:relative;z-index:1}
+
+/* ===== top nav ===== */
+.nav{position:sticky;top:0;z-index:50;background:rgba(255,247,244,.82);backdrop-filter:blur(12px);border-bottom:1px solid var(--c-line)}
+.nav .container{display:flex;align-items:center;gap:12px;height:64px}
+.brand{display:flex;align-items:center;gap:10px;font-family:"Baloo 2";font-weight:700;font-size:1.2rem;color:var(--c-primary-d)}
+.brand .logo{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--c-primary),var(--c-accent));display:grid;place-items:center;font-size:1.2rem;box-shadow:var(--shadow-sm)}
+.nav-links{display:flex;gap:3px;flex:1;min-width:0;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none;-ms-overflow-style:none}
+.nav-links::-webkit-scrollbar{display:none}
+.nav-links>a:first-child{margin-left:auto}
+.nav-links a{padding:7px 11px;border-radius:999px;font-weight:600;font-size:.9rem;color:#6c6980;transition:.2s;white-space:nowrap;flex:none}
+.nav-links a:hover{background:#fff;color:var(--c-primary-d)}
+.nav-links a.active{background:var(--c-primary);color:#fff}
+.more-wrap{position:relative;flex:none}
+.more-btn{padding:7px 11px;border-radius:999px;font-weight:600;font-size:.9rem;color:#6c6980;white-space:nowrap;cursor:pointer;transition:.2s}
+.more-btn .carat{font-size:.7rem;opacity:.75;margin-left:2px}
+.more-btn:hover,.more-btn.active{background:#fff;color:var(--c-primary-d)}
+.more-menu{display:none;position:fixed;top:auto;right:auto;min-width:160px;background:#fff;border-radius:12px;box-shadow:var(--shadow);padding:6px;z-index:1200;flex-direction:column;gap:2px;animation:mmpop .16s ease-out}
+.more-menu.show{display:flex}
+.more-menu a{padding:9px 14px;border-radius:8px;font-weight:600;font-size:.92rem;color:#4b4a5a;white-space:nowrap;cursor:pointer;transition:.15s}
+.more-menu a:hover{background:var(--c-bg);color:var(--c-primary-d)}
+.more-menu a.active{background:var(--c-primary);color:#fff}
+/* nav-emoji: 桌面顶栏隐藏（空间紧张）；桌面"更多"下拉浮层里显示；移动抽屉全部显示 */
+.nav-emoji{display:none;text-align:center;width:1.4em;line-height:1;flex:none}
+.more-menu>a .nav-emoji{display:inline-block;margin-right:8px;font-size:1.02rem}
+@keyframes mmpop{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.nav .adminlink{margin-left:6px}
+.menu-btn{display:none;margin-left:auto;font-size:1.5rem}
+
+/* ===== hero ===== */
+.hero{position:relative;padding:76px 0 90px;overflow:hidden}
+.hero-bg{position:absolute;inset:0;z-index:-1;background:linear-gradient(120deg,#ffe3ec,#e3f4f7,#fff2d9);background-size:300% 300%;animation:grad 16s ease infinite}
+@keyframes grad{0%{background-position:0 50%}50%{background-position:100% 50%}100%{background-position:0 50%}}
+.hero-inner{display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center}
+.hero h1{font-size:3rem;margin-bottom:14px}
+.hero h1 .accent{color:var(--c-primary-d)}
+.hero p.lead{font-size:1.12rem;color:#6c6980;margin-bottom:26px;max-width:520px}
+.hero-stats{display:flex;gap:26px;margin-top:30px}
+.hero-stats .s b{font-size:1.7rem;font-family:"Baloo 2";color:var(--c-primary-d);display:block}
+.hero-stats .s span{font-size:.85rem;color:var(--c-muted)}
+.hero-photo{position:relative;aspect-ratio:4/5;box-sizing:border-box;background:#fff;border:14px solid #fff;border-bottom-width:56px;border-radius:6px;overflow:hidden;box-shadow:0 24px 60px rgba(224,110,136,.28),0 8px 20px rgba(0,0,0,.08);transform:rotate(2deg)}
+
+/* ========== 相框风格切换：默认 polaroid（上面规则），下面是其它风格的覆盖 ========== */
+/* —— 白边墙：均匀白边，无底部厚白，方形 —— */
+html.frame-matted .photos .p,
+html.frame-matted .tl-card .tl-img,
+html.frame-matted .diary .ph,
+html.frame-matted .ms-card .ph,
+html.frame-matted .vthumb,
+html.frame-matted .alb{aspect-ratio:1/1;border-width:10px;border-bottom-width:10px;border-radius:6px;box-shadow:0 6px 18px rgba(60,40,50,.12)}
+html.frame-matted .hero-photo{border-width:12px;border-bottom-width:12px;border-radius:8px;transform:none;box-shadow:0 12px 32px rgba(60,40,50,.14)}
+html.frame-matted .photos .p:hover{transform:translateY(-4px);box-shadow:0 12px 28px rgba(60,40,50,.18)}
+html.frame-matted .alb:hover{transform:translateY(-4px);box-shadow:0 14px 34px rgba(60,40,50,.2)}
+
+/* —— 复古木质：褐色边框，深阴影 —— */
+html.frame-wood .photos .p,
+html.frame-wood .tl-card .tl-img,
+html.frame-wood .diary .ph,
+html.frame-wood .ms-card .ph,
+html.frame-wood .vthumb,
+html.frame-wood .alb{aspect-ratio:1/1;border:12px solid #8b6b47;background:#8b6b47;border-radius:2px;box-shadow:0 8px 22px rgba(80,50,30,.28),inset 0 0 0 2px rgba(0,0,0,.18)}
+html.frame-wood .hero-photo{border:16px solid #8b6b47;background:#8b6b47;border-radius:3px;transform:none;box-shadow:0 16px 44px rgba(80,50,30,.35),inset 0 0 0 2px rgba(0,0,0,.2)}
+html.frame-wood .photos .p:hover{transform:translateY(-4px);box-shadow:0 14px 32px rgba(80,50,30,.36),inset 0 0 0 2px rgba(0,0,0,.18)}
+html.frame-wood .alb:hover{transform:translateY(-4px);box-shadow:0 16px 36px rgba(80,50,30,.4)}
+
+/* —— 无框：干净圆角+柔和阴影 —— */
+html.frame-none .photos .p,
+html.frame-none .tl-card .tl-img,
+html.frame-none .diary .ph,
+html.frame-none .ms-card .ph,
+html.frame-none .vthumb,
+html.frame-none .alb{aspect-ratio:1/1;border:0;background:transparent;border-radius:14px;box-shadow:var(--shadow-sm)}
+html.frame-none .ms-card .ph,
+html.frame-none .diary .ph,
+html.frame-none .vthumb{border-radius:14px 14px 0 0}
+html.frame-none .hero-photo{border:0;background:transparent;border-radius:22px;transform:none;box-shadow:var(--shadow)}
+
+/* ========== 宝丽来底部白边显示日期（手写体） ========== */
+/* 宝丽来模式下：让容器 overflow 可见，image 的 clipping 由 mthumb 负责 */
+html.frame-polaroid .photos .p,
+html.frame-polaroid .tl-card .tl-img,
+html.frame-polaroid .diary .ph,
+html.frame-polaroid .ms-card .ph,
+html.frame-polaroid .vthumb,
+html.frame-polaroid .hero-photo{overflow:visible;position:relative}
+
+/* 日期用 ::after 渲染在 border-bottom 区域 —— 只有 [data-date] 存在时才显示 */
+html.frame-polaroid .photos .p[data-date]::after,
+html.frame-polaroid .tl-card .tl-img[data-date]::after,
+html.frame-polaroid .diary .ph[data-date]::after,
+html.frame-polaroid .ms-card .ph[data-date]::after,
+html.frame-polaroid .vthumb[data-date]::after,
+html.frame-polaroid .hero-photo[data-date]::after{
+  content:attr(data-date);
+  position:absolute;top:100%;left:0;right:0;
+  height:34px;
+  display:grid;place-items:center;
+  font-family:'Caveat','Ma Shan Zheng','STKaiti','KaiTi','楷体','PingFang SC',cursive;
+  font-size:.95rem;color:#7a5238;
+  pointer-events:none;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  padding:0 8px;letter-spacing:.02em;
+}
+
+/* 分容器：让日期高度与各自的 border-bottom-width 匹配 */
+html.frame-polaroid .ms-card .ph[data-date]::after,
+html.frame-polaroid .diary .ph[data-date]::after,
+html.frame-polaroid .vthumb[data-date]::after{height:20px;font-size:.72rem}
+html.frame-polaroid .tl-card .tl-img[data-date]::after{height:28px;font-size:.85rem}
+html.frame-polaroid .hero-photo[data-date]::after{height:56px;font-size:1.35rem;color:#8f5e2b}
+html.frame-none .photos .p:hover{transform:scale(1.04);box-shadow:var(--shadow)}
+html.frame-none .alb:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
+
+/* ========== AdSettings 里的四个风格预览按钮 ========== */
+.frame-picker{display:flex;gap:12px;flex-wrap:wrap}
+.frame-picker button{display:flex;flex-direction:column;align-items:center;gap:10px;padding:14px 12px;border:2px solid var(--c-line);border-radius:14px;background:#fff;cursor:pointer;font-family:inherit;font-weight:600;font-size:.86rem;color:var(--c-ink);transition:.2s;min-width:104px}
+.frame-picker button:hover{border-color:var(--c-primary)}
+.frame-picker button.on{border-color:var(--c-primary);background:linear-gradient(135deg,#fef4f6,#fef8fa);color:var(--c-primary-strong);box-shadow:0 4px 12px rgba(224,110,136,.15)}
+.frame-picker .preview{display:block;background:linear-gradient(135deg,#7fc8d4,#ef8fa4);box-sizing:border-box;flex:none}
+.frame-picker .preview-polaroid{width:56px;height:72px;border:5px solid #fff;border-bottom-width:18px;border-radius:2px;box-shadow:0 3px 8px rgba(0,0,0,.15)}
+.frame-picker .preview-matted{width:60px;height:60px;border:6px solid #fff;border-radius:4px;box-shadow:0 3px 8px rgba(0,0,0,.12)}
+.frame-picker .preview-wood{width:60px;height:60px;border:7px solid #8b6b47;border-radius:2px;box-shadow:0 3px 8px rgba(80,50,30,.28),inset 0 0 0 1px rgba(0,0,0,.2)}
+.frame-picker .preview-none{width:60px;height:60px;border-radius:12px;box-shadow:0 3px 8px rgba(0,0,0,.1)}
+.frame-picker .lbl{font-size:.82rem}
+.hero-photo img{width:100%;height:100%;object-fit:cover}
+.hero-badge{position:absolute;left:-14px;bottom:24px;background:#fff;border-radius:16px;padding:10px 16px;box-shadow:var(--shadow);transform:rotate(-4deg);font-weight:700;color:var(--c-primary-d)}
+
+/* ===== carousel ===== */
+.carousel{position:relative;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);aspect-ratio:16/7;background:#eee}
+.carousel .slide{position:absolute;inset:0;opacity:0;transition:opacity 1s;background-size:cover;background-position:center}
+.carousel .slide.on{opacity:1}
+.carousel .cap{position:absolute;left:0;right:0;bottom:0;padding:26px;background:linear-gradient(transparent,rgba(0,0,0,.55));color:#fff;font-weight:600}
+.carousel .dots{position:absolute;bottom:14px;right:18px;display:flex;gap:7px}
+.carousel .dots i{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.55);cursor:pointer}
+.carousel .dots i.on{background:#fff;width:22px;border-radius:5px}
+
+/* ===== milestone cards ===== */
+.ms-grid{grid-template-columns:repeat(3,1fr)}
+.ms-card{overflow:hidden;transition:.3s}
+.ms-card:hover{transform:translateY(-6px)}
+.ms-card .ph{aspect-ratio:4/3;box-sizing:border-box;background:#fff;border:8px solid #fff;border-bottom-width:20px;border-radius:16px 16px 0 0;overflow:hidden}
+.ms-card .bd{padding:18px 20px}
+.ms-card .dt{font-size:.8rem;color:var(--c-secondary-d);font-weight:700}
+.ms-card h4{margin:4px 0 6px;font-size:1.12rem}
+.ms-card p{color:var(--c-muted);font-size:.92rem}
+
+/* ===== timeline ===== */
+.tl{position:relative;max-width:820px;margin:0 auto;padding-left:12px}
+.tl::before{content:"";position:absolute;left:22px;top:8px;bottom:8px;width:3px;background:linear-gradient(var(--c-primary),var(--c-secondary))}
+.tl-item{position:relative;padding:0 0 34px 60px}
+.tl-item .dot{position:absolute;left:12px;top:4px;width:24px;height:24px;border-radius:50%;background:#fff;border:4px solid var(--c-primary);box-shadow:0 0 0 4px rgba(239,143,164,.15)}
+.tl-item .yr{position:absolute;left:-4px;top:-2px}
+.tl-card{padding:16px 20px}
+.tl-card .tl-img:hover{transform:translateY(-3px) rotate(-1deg);box-shadow:0 12px 28px rgba(60,40,50,.18)}
+.tl-card .dt{color:var(--c-secondary-d);font-weight:700;font-size:.82rem}
+.tl-card h4{margin:3px 0 6px}
+.tl-card .tl-img{margin-top:14px;box-sizing:border-box;background:#fff;border:8px solid #fff;border-bottom-width:28px;border-radius:3px;aspect-ratio:4/3;overflow:hidden;box-shadow:0 6px 18px rgba(60,40,50,.13);transition:transform .3s,box-shadow .3s;cursor:pointer}
+.yr-filter{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:30px}
+.yr-filter button{padding:6px 16px;border-radius:999px;background:#fff;box-shadow:var(--shadow-sm);font-weight:600;color:#6c6980}
+.yr-filter button.on{background:var(--c-primary);color:#fff}
+
+/* ===== gallery ===== */
+.alb-grid{grid-template-columns:repeat(3,1fr)}
+.alb{position:relative;box-sizing:border-box;background:#fff;border:8px solid #fff;border-bottom-width:36px;border-radius:4px;aspect-ratio:3/4;overflow:hidden;cursor:pointer;box-shadow:0 8px 22px rgba(60,40,50,.16);transition:transform .35s,box-shadow .35s}
+.alb .cover{position:absolute;inset:0;background-size:cover;background-position:center;transition:.5s}
+.alb:hover .cover{transform:scale(1.07)}
+.alb:hover{transform:translateY(-5px) rotate(-1deg);box-shadow:0 16px 38px rgba(60,40,50,.22)}
+.alb .ov{position:absolute;inset:0;background:linear-gradient(transparent 40%,rgba(0,0,0,.6));display:flex;flex-direction:column;justify-content:flex-end;padding:18px;color:#fff}
+.alb .ov h4{color:#fff}
+.alb .ov span{font-size:.82rem;opacity:.85}
+.photos{grid-template-columns:repeat(4,1fr);gap:20px}
+.photos .p{aspect-ratio:3/4;box-sizing:border-box;background:#fff;border:8px solid #fff;border-bottom-width:34px;border-radius:3px;overflow:hidden;cursor:pointer;box-shadow:0 6px 20px rgba(60,40,50,.14),0 2px 5px rgba(60,40,50,.06);transition:transform .35s cubic-bezier(.2,.9,.3,1.15),box-shadow .35s}
+.photos .p:hover{transform:translateY(-6px) rotate(-1.5deg);box-shadow:0 14px 34px rgba(60,40,50,.2),0 4px 10px rgba(60,40,50,.08);z-index:1}
+/* lightbox */
+.lb{position:fixed;inset:0;background:rgba(20,15,20,.9);z-index:200;display:grid;place-items:center;padding:30px}
+.lb-fig{display:flex;flex-direction:column;align-items:center;gap:10px;max-width:92vw;max-height:92vh;margin:0}
+.lb-media{max-width:92vw;max-height:78vh;width:auto;height:auto;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.5);background:#000}
+.lb-cap{color:#fff;text-align:center;max-width:min(92vw,720px)}
+.lb-title{font-weight:700;font-size:1.02rem}
+.lb-desc{opacity:.85;font-size:.92rem;margin-top:3px;white-space:pre-wrap}
+.lb-meta{opacity:.8;font-size:.82rem;margin-top:8px;display:flex;gap:10px;align-items:center;justify-content:center}
+.lb-input{width:min(82vw,520px);padding:9px 12px;border-radius:10px;border:none;margin-top:6px;font-family:inherit;font-size:.95rem}
+.lb .x{position:absolute;top:20px;right:26px;font-size:2rem;color:#fff}
+.lb .arw{position:absolute;top:50%;transform:translateY(-50%);font-size:2.4rem;color:#fff;padding:18px;user-select:none}
+.lb .arw.l{left:10px}.lb .arw.r{right:10px}
+.lb .cap{position:absolute;bottom:24px;left:0;right:0;text-align:center;color:#fff}
+
+/* ===== growth ===== */
+.chart{height:340px;width:100%}
+.tbl{width:100%;border-collapse:collapse;overflow:hidden;border-radius:14px}
+.tbl th,.tbl td{padding:12px 14px;text-align:left;border-bottom:1px solid var(--c-line)}
+.tbl th{background:#fbeef0;color:#8a5566;font-size:.85rem}
+.tbl tr:hover td{background:#fff9fa}
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:26px}
+.stat{padding:20px;text-align:center}
+.stat b{font-size:1.8rem;font-family:"Baloo 2";color:var(--c-primary-d);display:block}
+.stat span{color:var(--c-muted);font-size:.85rem}
+
+/* ===== daily ===== */
+.prog{height:20px;border-radius:999px;background:#f0e3dd;overflow:hidden;margin:10px 0}
+.prog i{display:block;height:100%;background:linear-gradient(90deg,var(--c-secondary),var(--c-primary));border-radius:999px;transition:width .6s}
+.feed-timer{font-family:"Baloo 2";font-size:2.4rem;color:var(--c-primary-d)}
+.log{display:flex;align-items:center;gap:14px;padding:13px 16px;border-radius:14px;background:#fff;box-shadow:var(--shadow-sm);margin-bottom:10px}
+.log .ic{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-size:1.3rem;flex:none}
+.log .ic.feed{background:#e5f4f7}.log .ic.pee{background:#fff3d6}.log .ic.poop{background:#efe4d8}
+
+/* ===== diary ===== */
+.diary-grid{grid-template-columns:repeat(2,1fr)}
+.diary .ph{aspect-ratio:4/3;box-sizing:border-box;background:#fff;border:8px solid #fff;border-bottom-width:20px;border-radius:16px 16px 0 0;overflow:hidden;box-shadow:0 3px 10px rgba(60,40,50,.06) inset}
+.diary .bd{padding:20px 22px}
+.diary .bd .dt{color:var(--c-secondary-d);font-weight:700;font-size:.82rem}
+.diary .bd h3{margin:5px 0 8px}
+.diary .bd p{color:#6c6980}
+
+/* ===== messages ===== */
+.msg-grid{grid-template-columns:repeat(3,1fr)}
+.msg{padding:18px 20px;position:relative}
+.msg .who{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.msg .av{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700}
+.msg p{color:#5b5870}
+.msg .t{font-size:.76rem;color:var(--c-muted);margin-top:8px}
+
+/* ===== about ===== */
+.about-hero{display:grid;grid-template-columns:.8fr 1.2fr;gap:36px;align-items:center}
+.about-hero .av{aspect-ratio:1/1;border-radius:28px;overflow:hidden;box-shadow:var(--shadow)}
+.family{grid-template-columns:repeat(3,1fr);margin-top:34px}
+.fam{padding:20px;text-align:center}
+.fam .av{width:84px;height:84px;border-radius:50%;margin:0 auto 12px;background-size:cover;background-position:center;box-shadow:var(--shadow-sm)}
+
+/* ===== forms / admin ===== */
+.field{margin-bottom:16px}
+.field label{display:block;font-weight:600;font-size:.88rem;margin-bottom:6px;color:#6c6980}
+.field input,.field textarea,.field select{width:100%;padding:11px 14px;border:1.5px solid var(--c-line);border-radius:12px;background:#fff;transition:.2s}
+.field input:focus,.field textarea:focus,.field select:focus{outline:none;border-color:var(--c-secondary-d);box-shadow:0 0 0 3px rgba(127,200,212,.18)}
+.checkline{display:flex;align-items:center;gap:8px}
+.checkline input{width:auto}
+.login-wrap{min-height:70vh;display:grid;place-items:center;padding:40px 6%}
+.login-card{width:100%;max-width:400px;padding:34px}
+.admin{display:grid;grid-template-columns:230px 1fr;gap:24px;align-items:start}
+.side{position:sticky;top:82px;padding:16px;display:flex;flex-direction:column;gap:4px}
+.side a{padding:10px 14px;border-radius:12px;font-weight:600;color:#6c6980;font-size:.92rem;display:flex;align-items:center;gap:9px}
+.side a:hover{background:#fbeef0}
+.side a.active{background:var(--c-primary);color:#fff}
+.admin-main{min-height:60vh}
+.admin-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.admin-head h2{font-size:1.5rem}
+.list-row{display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:14px;background:#fff;box-shadow:var(--shadow-sm);margin-bottom:10px}
+.list-row .thumb{width:56px;height:56px;border-radius:12px;background-size:cover;background-position:center;flex:none;background-color:#f3e7e2}
+.list-row .grow{flex:1;min-width:0}
+.list-row .grow b{display:block}
+.list-row .grow small{color:var(--c-muted)}
+.pill{padding:3px 10px;border-radius:999px;font-size:.74rem;font-weight:700}
+.pill.pend{background:#fff1cf;color:#a5791a}.pill.ok{background:#dbf3e4;color:#2f855a}.pill.due{background:#ffe1e1;color:#c0392b}.pill.grey{background:#eef1f5;color:#7a7688}
+.modal-bg{position:fixed;inset:0;background:rgba(60,40,50,.5);z-index:150;display:grid;place-items:center;padding:24px;overflow:auto}
+.modal{width:100%;max-width:540px;padding:28px;max-height:90vh;overflow:auto}
+.modal h3{margin-bottom:18px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.swatch{display:flex;gap:10px;flex-wrap:wrap}
+.swatch button{width:38px;height:38px;border-radius:50%;box-shadow:var(--shadow-sm);border:3px solid #fff}
+.swatch button.on{outline:3px solid var(--c-ink)}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px dashed var(--c-line)}
+.sw{width:46px;height:26px;border-radius:999px;background:#ddd;position:relative;transition:.25s;flex:none}
+.sw.on{background:var(--c-secondary)}
+.sw i{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.25s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.sw.on i{left:23px}
+
+/* ===== AI widget ===== */
+.ai-fab{position:fixed;right:22px;bottom:22px;z-index:120;width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,var(--c-primary),var(--c-accent));box-shadow:0 12px 30px rgba(224,110,136,.4);display:grid;place-items:center;font-size:1.6rem;color:#fff;transition:.25s}
+.ai-fab:hover{transform:scale(1.08)}
+.ai-panel{position:fixed;right:22px;bottom:94px;z-index:121;width:370px;max-width:calc(100vw - 30px);height:520px;max-height:calc(100vh - 130px);border-radius:22px;background:#fff;box-shadow:0 24px 60px rgba(60,40,50,.28);display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--c-line)}
+.ai-head{padding:14px 18px;background:linear-gradient(135deg,var(--c-primary),var(--c-primary-d));color:#fff;display:flex;align-items:center;gap:10px}
+.ai-head .st{margin-left:auto;font-size:.72rem;opacity:.9}
+.ai-body{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;background:#fbf6f4}
+.bub{max-width:82%;padding:10px 14px;border-radius:16px;font-size:.92rem;line-height:1.5;white-space:pre-wrap}
+.bub.ai{align-self:flex-start;background:#fff;box-shadow:var(--shadow-sm);border-bottom-left-radius:4px}
+.bub.me{align-self:flex-end;background:var(--c-primary);color:#fff;border-bottom-right-radius:4px}
+.ai-quick{display:flex;gap:6px;flex-wrap:wrap;padding:8px 12px;background:#fff;border-top:1px solid var(--c-line)}
+.ai-quick button{font-size:.78rem;padding:5px 11px;border-radius:999px;background:#f3e7e2;color:#7a5563}
+.ai-input{display:flex;gap:8px;padding:12px;background:#fff;border-top:1px solid var(--c-line)}
+.ai-input input{flex:1;padding:10px 14px;border:1.5px solid var(--c-line);border-radius:999px}
+.ai-input button{width:42px;height:42px;border-radius:50%;background:var(--c-primary);color:#fff;flex:none;font-size:1.1rem}
+.ai-input button.mic.rec{background:#f2787a;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(242,120,122,.5)}50%{box-shadow:0 0 0 8px rgba(242,120,122,0)}}
+
+/* ===== footer ===== */
+.footer{padding:40px 0;text-align:center;color:var(--c-muted);font-size:.88rem;border-top:1px solid var(--c-line);margin-top:40px}
+
+/* ===== responsive ===== */
+@media(max-width:900px){
+  .hero-inner{grid-template-columns:1fr}.hero-photo{max-width:360px;margin:0 auto}
+  .ms-grid,.alb-grid,.msg-grid,.family{grid-template-columns:1fr 1fr}
+  .photos{grid-template-columns:repeat(3,1fr)}.diary-grid{grid-template-columns:1fr}
+  .about-hero{grid-template-columns:1fr}.admin{grid-template-columns:1fr}
+  .side{position:static;flex-direction:row;overflow-x:auto}.stat-row{grid-template-columns:1fr 1fr}
+  .section{padding:48px 0}
+  /* ---- 移动端顶部与抽屉 ---- */
+  .menu-btn{display:grid;place-items:center;width:44px;height:44px;font-size:1.35rem;border-radius:12px;color:var(--c-primary-d)}
+  .menu-btn:hover{background:var(--c-bg)}
+  .nav-links{display:none;position:absolute;top:64px;left:0;right:0;background:#fff;flex-direction:column;padding:10px 12px 14px;gap:2px;box-shadow:0 12px 30px rgba(0,0,0,.08);overflow:visible;border-top:1px solid var(--c-line);max-height:calc(100vh - 64px);overflow-y:auto;overscroll-behavior:contain}
+  .nav-links.open{display:flex}
+  .nav-links>a{padding:13px 16px;border-radius:12px;font-size:1rem;text-align:left;color:var(--c-ink);white-space:normal}
+  .nav-links>a:first-child{margin-left:0}
+  .nav-links>a:hover{background:var(--c-bg);color:var(--c-primary-d)}
+  .nav-links>a.active{background:var(--c-primary);color:#fff}
+  .nav-links>a.active:hover{background:var(--c-primary);color:#fff}
+  .adminlink{margin-left:0}
+  .nav-links>a.adminlink{margin-top:0;padding-top:13px;border-top:none;font-weight:600}
+  .nav-links>a:not(.adminlink)+a.adminlink{margin-top:8px;padding-top:16px;border-top:1px solid var(--c-line)}
+  /* 更多下拉在抽屉里平铺，样式统一 */
+  .more-wrap,.more-menu{display:contents}
+  .more-btn{display:none}
+  .more-menu>a{padding:13px 16px;border-radius:12px;font-size:1rem;color:var(--c-ink);font-weight:600}
+  .nav-links>a .nav-emoji,.more-menu>a .nav-emoji{display:inline-block;margin-right:12px;font-size:1.15rem;width:1.4em}
+  .more-menu>a:hover{background:var(--c-bg);color:var(--c-primary-d)}
+  .more-menu>a.active{background:var(--c-primary);color:#fff}
+  /* 抽屉打开时锁定背景滚动 */
+  html.drawer-open,html.drawer-open body{overflow:hidden;touch-action:none}
+}
+@media(max-width:560px){
+  .hero h1{font-size:2.2rem}.ms-grid,.alb-grid,.msg-grid,.family,.row2,.stat-row{grid-template-columns:1fr}
+  .photos{grid-template-columns:1fr 1fr}.section{padding:44px 0}
+}
+.mthumb{position:absolute;inset:0;overflow:hidden}
+.mediafill{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background-size:cover;background-position:center}
+.playbadge{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:52px;height:52px;border-radius:50%;background:rgba(0,0,0,.45);color:#fff;display:grid;place-items:center;font-size:1.25rem;pointer-events:none}
+.photos .p,.ms-card .ph,.tl-card .tl-img,.diary .ph{position:relative}
+.alb:hover .mediafill{transform:scale(1.07)}
+.vid-grid{grid-template-columns:repeat(3,1fr)}
+.vid-card{overflow:hidden;cursor:pointer;transition:.3s}
+.vid-card:hover{transform:translateY(-6px)}
+.vthumb{position:relative;aspect-ratio:4/3;box-sizing:border-box;background:#fff;border:8px solid #fff;border-bottom-width:20px;border-radius:16px 16px 0 0;overflow:hidden}
+.vid-card .bd{padding:14px 18px}
+.vid-card .dt{color:var(--c-secondary-d);font-weight:700;font-size:.8rem}
+.vid-card h4{margin:3px 0 6px}
+.vid-card p{color:var(--c-muted);font-size:.9rem}
+.list-row .thumb{position:relative}
+@media(max-width:900px){.vid-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.vid-grid{grid-template-columns:1fr}}
+.upbar{position:fixed;left:0;right:0;bottom:0;z-index:130;display:flex;justify-content:center;padding:14px;pointer-events:none}
+.upbar-card{pointer-events:auto;background:#fff;border-radius:14px;box-shadow:0 10px 30px rgba(60,40,50,.18);padding:12px 16px;width:min(420px,92vw);border:1px solid var(--c-line)}
+.upbar-row{display:flex;justify-content:space-between;align-items:center;font-size:.9rem;margin-bottom:8px;color:#5b5870}
+.upbar-track{height:8px;border-radius:999px;background:#f0e3dd;overflow:hidden}
+.upbar-track i{display:block;height:100%;background:linear-gradient(90deg,var(--c-secondary),var(--c-primary));transition:width .2s}
+.upbar-cancel{padding:4px 12px;border-radius:999px;background:#f3e7e2;color:#8b6b6b;font-size:.8rem;font-weight:600;cursor:pointer;transition:.15s;border:none;font-family:inherit}
+.upbar-cancel:hover{background:#e0576a;color:#fff}
+.upbar-hint{color:var(--c-muted);font-size:.8rem;font-style:italic}
+</style>
+</head>
+<body>
+<div id="deco"></div>
+<div id="app"></div>
+<script>
+/* ============================================================
+   宝贝成长记 — 单文件演示版 (Vue 3 + ECharts, 数据存 localStorage)
+   ============================================================ */
+const { createApp, reactive, computed, ref, watch, onMounted, nextTick } = Vue;
+const LS_KEY = 'bgt_demo_v1';
+/* 健壮存储：真实 localStorage/sessionStorage 优先；在无 allow-same-origin 的沙箱 iframe 中访问会抛 SecurityError，此时自动降级为内存存储（本会话有效） */
+function makeStore(kind){
+  let ok=true, backend=null; const mem={};
+  try{ backend=window[kind]; const t='__probe__'; backend.setItem(t,'1'); backend.removeItem(t); }
+  catch(e){ ok=false; backend=null; }
+  return {
+    get persistent(){return ok;},
+    getItem(k){ if(ok){ try{ return backend.getItem(k); }catch(e){ ok=false; } } return (k in mem)?mem[k]:null; },
+    setItem(k,v){ if(ok){ try{ backend.setItem(k,String(v)); return; }catch(e){ ok=false; } } mem[k]=String(v); },
+    removeItem(k){ if(ok){ try{ backend.removeItem(k); return; }catch(e){ ok=false; } } delete mem[k]; }
+  };
+}
+const LS = makeStore('localStorage');
+const SS = makeStore('sessionStorage');
+
+/* ---------- helpers ---------- */
+const pic = (s,w=800,h=600)=>`https://picsum.photos/seed/${s}/${w}/${h}`;
+const uid = ()=>Math.random().toString(36).slice(2,9);
+const pad = n=>String(n).padStart(2,'0');
+const iso = d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const addMonths=(dateStr,m)=>{const d=new Date(dateStr);d.setMonth(d.getMonth()+m);return iso(d);};
+const fmtDate = s=>{const d=new Date(s);return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`;};
+const fmtMD = s=>{const d=new Date(s);return `${d.getMonth()+1}月${d.getDate()}日`;};
+function ageText(birth,ref=new Date()){
+  const b=new Date(birth); let mo=(ref.getFullYear()-b.getFullYear())*12+(ref.getMonth()-b.getMonth());
+  if(ref.getDate()<b.getDate()) mo--; if(mo<0)mo=0;
+  const y=Math.floor(mo/12), m=mo%12;
+  return (y?y+'岁':'')+(m?m+'个月':(y?'':'未满月'));
+}
+function daysOld(birth,ref=new Date()){return Math.max(0,Math.floor((ref-new Date(birth))/864e5));}
+function since(ts){const s=Math.max(0,(Date.now()-new Date(ts))/1000);const h=Math.floor(s/3600),m=Math.floor(s%3600/60);return h?`${h}小时${m}分`:`${m}分钟`;}
+function todayStr(){return iso(new Date());}
+function nowMinus(h){const d=new Date();d.setHours(d.getHours()-h);return d.toISOString();}
+
+const VXSTD=[['乙肝疫苗',1,0],['乙肝疫苗',2,1],['乙肝疫苗',3,6],['卡介苗',1,0],['脊灰疫苗',1,2],['脊灰疫苗',2,3],['脊灰疫苗',3,4],['脊灰疫苗',4,48],['百白破疫苗',1,3],['百白破疫苗',2,4],['百白破疫苗',3,5],['百白破疫苗',4,18],['麻风疫苗',1,8],['麻腮风疫苗',1,18],['乙脑减毒疫苗',1,8],['乙脑减毒疫苗',2,24],['A群流脑疫苗',1,6],['A群流脑疫苗',2,9],['甲肝减毒疫苗',1,18]];
+function vxDue(v){const b=new Date(state.db.baby.birthday);if(isNaN(b))return null;const d=new Date(b);d.setMonth(d.getMonth()+(+v.plannedMonth||0));return d;}
+function vxInfo(v){const due=vxDue(v);const t=new Date();t.setHours(0,0,0,0);let days=null;if(due){const dd=new Date(due);dd.setHours(0,0,0,0);days=Math.round((dd-t)/86400000);}if(v.date)return{label:'已接种',cls:'ok',due,days};if(days!=null&&days<0)return{label:'逾期',cls:'due',due,days};if(days!=null&&days<=30)return{label:'即将到期',cls:'pend',due,days};return{label:'待接种',cls:'grey',due,days};}
+function vxMonLabel(m){m=+m;if(m===0)return '出生时';if(m<12)return m+' 月龄';const y=Math.floor(m/12),mm=m%12;return mm?(y+'岁'+mm+'月'):(y+' 岁');}
+
+/* ---------- seed ---------- */
+function buildSeed(){
+  const birth='2024-09-15';
+  const gt=[[0,50,3.3],[1,54.5,4.2],[2,57.8,5.1],[3,60.2,5.8],[4,62.3,6.4],[5,64,6.9],[6,65.7,7.3],
+    [8,68.5,7.9],[10,71,8.5],[12,74,9.0],[15,77.5,9.7],[18,80.5,10.4],[21,83,11.0]];
+  const growth=gt.map(([mo,h,w])=>({id:uid(),date:addMonths(birth,mo),height:h,weight:w,head:(34+mo*0.6).toFixed(1)*1}));
+  const daily=[
+    {id:uid(),type:'feeding',feedType:'formula',amount:150,time:nowMinus(2.2),note:'喝得很香'},
+    {id:uid(),type:'diaper',diaperType:'poop',time:nowMinus(3),note:'金黄色，正常'},
+    {id:uid(),type:'feeding',feedType:'breast',amount:120,time:nowMinus(5),note:''},
+    {id:uid(),type:'diaper',diaperType:'pee',time:nowMinus(6),note:''},
+    {id:uid(),type:'feeding',feedType:'formula',amount:160,time:nowMinus(8),note:''},
+    {id:uid(),type:'diaper',diaperType:'pee',time:nowMinus(9.5),note:''},
+    {id:uid(),type:'feeding',feedType:'formula',amount:150,time:nowMinus(11),note:'夜奶'},
+  ];
+  return {
+    baby:{name:'小满',gender:'girl',birthday:birth,avatar:pic('xiaoman-av',400,400),
+      bio:'2024年秋天来到我们身边的小天使，爱笑、爱吃、爱探索世界。这里记录她一点一滴的成长。',
+      family:'爸爸 · 妈妈 · 还有一只叫奶糖的猫'},
+    milestones:[
+      {id:uid(),date:addMonths(birth,1),title:'第一次微笑',desc:'满月刚过，对着妈妈露出了人生第一个微笑，融化了全家。',category:'情感',image:pic('ms-smile',800,500)},
+      {id:uid(),date:addMonths(birth,3),title:'学会翻身',desc:'趴着玩的时候突然一个用力翻了过来，自己都吓了一跳。',category:'大动作',image:pic('ms-roll',800,500)},
+      {id:uid(),date:addMonths(birth,6),title:'第一口辅食',desc:'开始添加米粉，小勺子送到嘴边，吃得满脸都是。',category:'饮食',image:pic('ms-food',800,500)},
+      {id:uid(),date:addMonths(birth,8),title:'会坐稳了',desc:'终于可以自己稳稳地坐着玩玩具，解放了妈妈的双手。',category:'大动作',image:pic('ms-sit',800,500)},
+      {id:uid(),date:addMonths(birth,11),title:'第一次叫妈妈',desc:'含糊却清晰地喊出了"妈妈"，妈妈激动得哭了。',category:'语言',image:pic('ms-mama',800,500)},
+      {id:uid(),date:addMonths(birth,13),title:'迈出第一步',desc:'扶着沙发慢慢松手，独立走出了摇摇晃晃的第一步！',category:'大动作',image:'https://www.w3schools.com/html/mov_bbb.mp4'},
+    ],
+    albums:[
+      {id:uid(),name:'满月纪念',date:addMonths(birth,1),desc:'小满满月啦',cover:pic('al-1',700,700),
+        photos:[1,2,3,4,5,6].map(i=>({id:uid(),url:pic('al1-'+i,900,900),caption:'满月写真 '+i,takenAt:addMonths(birth,1)}))},
+      {id:uid(),name:'百天写真',date:addMonths(birth,3),desc:'100天的小可爱',cover:pic('al-2',700,700),
+        photos:[1,2,3,4,5].map(i=>({id:uid(),url:pic('al2-'+i,900,900),caption:'百天照 '+i,takenAt:addMonths(birth,3)}))},
+      {id:uid(),name:'第一个夏天',date:addMonths(birth,10),desc:'海边的欢乐时光',cover:pic('al-3',700,700),
+        photos:[...[1,2,3,4,5,6,7].map(i=>({id:uid(),url:pic('al3-'+i,900,900),caption:'夏日 '+i,takenAt:addMonths(birth,10)})),{id:uid(),url:'https://www.w3schools.com/html/mov_bbb.mp4',caption:'海边的小视频🎬',takenAt:addMonths(birth,10)}]},
+      {id:uid(),name:'周岁生日',date:addMonths(birth,12),desc:'一周岁快乐',cover:pic('al-4',700,700),
+        photos:[1,2,3,4].map(i=>({id:uid(),url:pic('al4-'+i,900,900),caption:'生日 '+i,takenAt:addMonths(birth,12)}))},
+    ],
+    growth,
+    daily,
+    diary:[
+      {id:uid(),date:addMonths(birth,2),title:'夜里的悄悄话',content:'今晚你又哭闹到半夜，我抱着你在客厅走了一圈又一圈。可当你在我怀里沉沉睡去，所有的疲惫都值得了。宝贝，慢慢长大呀。',images:[pic('d1',800,500)]},
+      {id:uid(),date:addMonths(birth,5),title:'第一次去公园',content:'带你去看了大大的草坪和五颜六色的花。你伸着小手想去抓飞过的蝴蝶，眼睛里满是好奇。这个世界，我想慢慢讲给你听。',images:[pic('d2a',700,500),pic('d2b',700,500)]},
+      {id:uid(),date:addMonths(birth,9),title:'牙牙学语',content:'你开始会发出各种奇怪的音节，像是在跟我们认真地讨论着什么大事。虽然听不懂，但我们都听得津津有味。',images:[pic('d3',800,500)]},
+      {id:uid(),date:addMonths(birth,12),title:'一岁啦',content:'一年前的今天你来到我们身边，小小的一只。如今你会走、会笑、会撒娇。谢谢你选择我们做你的爸爸妈妈。生日快乐，我的小满。',images:[pic('d4',800,500)]},
+      {id:uid(),date:(function(){const d=new Date();d.setFullYear(d.getFullYear()-1);return iso(d);})(),title:'去年的今天',content:'翻开相册，去年这一天的你还那么小，时间过得真快呀。',images:[pic('oty1',800,500)]},
+      {id:uid(),date:(function(){const d=new Date();d.setFullYear(d.getFullYear()-2);return iso(d);})(),title:'两年前的今天',content:'那年今天的小瞬间，被我们悄悄珍藏。',images:[pic('oty2',800,500)]},
+    ],
+    messages:[
+      {id:uid(),name:'奶奶',content:'我的乖孙女越来越漂亮了，奶奶好想你，快点视频给奶奶看看！',createdAt:nowMinus(30),status:'approved',color:'#ef8fa4'},
+      {id:uid(),name:'小姨',content:'小满周岁快乐！小姨给你准备了大礼物哦～',createdAt:nowMinus(72),status:'approved',color:'#7fc8d4'},
+      {id:uid(),name:'王阿姨',content:'太可爱了吧！这个网站做得真用心，满满的爱。',createdAt:nowMinus(120),status:'approved',color:'#ffca7a'},
+      {id:uid(),name:'同事老张',content:'恭喜恭喜！健康成长～',createdAt:nowMinus(10),status:'pending',color:'#9b8cff'},
+    ],
+    videos:[
+      {id:uid(),date:addMonths(birth,7),title:'翻身大成功',desc:'珍贵的翻身瞬间，反复看都不腻。',cover:pic('vc1',800,500),url:'https://www.w3schools.com/html/mov_bbb.mp4'},
+      {id:uid(),date:addMonths(birth,13),title:'摇摇晃晃第一步',desc:'人生第一步，全家欢呼。',cover:'',url:'https://www.w3schools.com/html/mov_bbb.mp4'},
+    ],
+    recaps:[{id:uid(),period:'week',title:'本周成长小结',content:'这一周，小满又悄悄长大了一点。新解锁的里程碑：迈出第一步。我们一起记录了 2 段视频。愿你慢慢长大，笑口常开 💕',createdAt:nowMinus(24)}],
+    vaccines:VXSTD.map(a=>({id:uid(),name:a[0],dose:a[1],plannedMonth:a[2],date:a[2]<=12?addMonths(birth,a[2]):''})),
+    shares:[],
+    users:[{id:uid(),username:'admin',password:'admin123',role:'admin'}],
+    invites:[{id:uid(),code:'FAMILY-2024',note:'示例邀请码',usedBy:null,usedAt:null,createdAt:nowMinus(240)}],
+    settings:{
+      admin:{username:'admin',password:'admin123'},
+      theme:{name:'甜心粉',primary:'#ec8aa0',primaryD:'#d75f7e',secondary:'#7fc6d0',accent:'#ffc178',bg:'#fff6f3'},
+      deco:{enabled:true,opacity:0.5,emoji:['🍼','🌸','⭐','🧸','🎈','☁️','💕']},
+      modules:{timeline:true,gallery:true,growth:true,vaccine:true,daily:true,diary:true,messages:true,videos:true,about:true},
+      home:{hero:true,countdown:true,onthisday:true,carousel:true,milestones:true,growth:true,videos:true,diary:true,recap:true,vaccine:true},
+      feeding:{defaultAmount:150,dailyTarget:900},
+      ai:{enabled:false,apiKey:'',baseUrl:'https://api.openai.com/v1',model:'gpt-4o-mini'},
+      faviconUrl:'',
+      photoFrame:'polaroid'
+    }
+  };
+}
+
+/* ---------- store ---------- */
+function load(){try{const s=LS.getItem(LS_KEY);if(s)return JSON.parse(s);}catch(e){}const seed=buildSeed();LS.setItem(LS_KEY,JSON.stringify(seed));return seed;}
+const state = reactive({ db: load(), session: (function(){try{return JSON.parse(LS.getItem('bgt_demo_session'))||{loggedIn:false,role:'',username:''};}catch(e){return {loggedIn:false,role:'',username:''};}})(), mobileMenu:false });
+if(!Array.isArray(state.db.users))state.db.users=[{id:uid(),username:'admin',password:'admin123',role:'admin'}];
+if(!Array.isArray(state.db.invites))state.db.invites=[{id:uid(),code:'FAMILY-2024',note:'示例邀请码',usedBy:null,usedAt:null,createdAt:nowMinus(240)}];
+watch(()=>state.db,()=>{LS.setItem(LS_KEY,JSON.stringify(state.db));},{deep:true});
+function resetDemo(){LS.removeItem(LS_KEY);state.db=buildSeed();applyTheme();}
+function setSession(u,remember){state.session={loggedIn:true,role:u.role,username:u.username};LS.setItem('bgt_demo_session',JSON.stringify(state.session));if(remember)LS.setItem('bgt_remember',JSON.stringify({u:u.username,p:u.password}));else LS.removeItem('bgt_remember');}
+function doLogout(){state.session={loggedIn:false,role:'',username:''};LS.removeItem('bgt_demo_session');go('home');}
+
+/* ---------- theme + deco ---------- */
+function shade(hex,amt){const h=(hex||'').replace('#','');if(h.length!==6)return hex;const n=parseInt(h,16);if(isNaN(n))return hex;const f=Math.max(0,1-amt);const c=[(n>>16)&255,(n>>8)&255,n&255].map(x=>Math.round(x*f).toString(16).padStart(2,'0'));return '#'+c.join('');}
+const DEFAULT_FAVICON="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20100%20100%27%3E%3Ctext%20y%3D%27.9em%27%20font-size%3D%2790%27%3E%F0%9F%8D%BC%3C%2Ftext%3E%3C%2Fsvg%3E";
+function applyFavicon(){
+  const u=(state.db.settings&&state.db.settings.faviconUrl)||'';
+  const cur=document.getElementById('favicon'); if(cur) cur.remove();
+  const link=document.createElement('link'); link.id='favicon'; link.rel='icon';
+  if(u){ link.href=u; } else { link.href=DEFAULT_FAVICON; link.type='image/svg+xml'; }
+  document.head.appendChild(link);
+}
+function applyTheme(){
+  const t=state.db.settings.theme, r=document.documentElement.style;
+  r.setProperty('--c-primary',t.primary);r.setProperty('--c-primary-d',t.primaryD);
+  r.setProperty('--c-primary-strong',shade(t.primaryD,0.12));
+  r.setProperty('--c-secondary',t.secondary);r.setProperty('--c-secondary-d',shade(t.secondary,0.38));
+  r.setProperty('--c-accent',t.accent);r.setProperty('--c-bg',t.bg);
+  const d=state.db.settings.deco; r.setProperty('--deco-opacity',d.enabled?d.opacity:0);
+  // Photo frame style: set html.frame-XXX class so scoped CSS can override
+  const frame = (state.db.settings && state.db.settings.photoFrame) || 'polaroid';
+  const cls = document.documentElement.classList;
+  ['frame-polaroid','frame-matted','frame-wood','frame-none'].forEach(c => cls.remove(c));
+  cls.add('frame-' + frame);
+  buildDeco();
+  applyFavicon();
+}
+function buildDeco(){
+  const el=document.getElementById('deco'); if(!el)return; el.innerHTML='';
+  const d=state.db.settings.deco; if(!d.enabled)return;
+  for(let i=0;i<14;i++){const s=document.createElement('span');s.textContent=d.emoji[i%d.emoji.length];
+    s.style.left=Math.random()*100+'%';s.style.top=Math.random()*100+'%';
+    s.style.animationDelay=(Math.random()*8)+'s';s.style.fontSize=(1.4+Math.random()*1.8)+'rem';el.appendChild(s);}
+}
+/* ---------- derived data ---------- */
+function sortedGrowth(){return state.db.growth.slice().sort((a,b)=>new Date(a.date)-new Date(b.date));}
+function latestGrowth(){const g=sortedGrowth();return g[g.length-1];}
+function dailyStats(){
+  const logs=state.db.daily.slice().sort((a,b)=>new Date(b.time)-new Date(a.time));
+  const t=todayStr();
+  const today=logs.filter(x=>iso(new Date(x.time))===t);
+  const feeds=today.filter(x=>x.type==='feeding');
+  const totalMl=feeds.reduce((s,x)=>s+(+x.amount||0),0);
+  const pee=today.filter(x=>x.type==='diaper'&&x.diaperType==='pee').length;
+  const poop=today.filter(x=>x.type==='diaper'&&x.diaperType==='poop').length;
+  const lastFeed=logs.find(x=>x.type==='feeding');
+  const target=+state.db.settings.feeding.dailyTarget||900;
+  return {feeds,totalMl,pee,poop,lastFeed,target,pct:Math.min(100,Math.round(totalMl/target*100)),logs,today};
+}
+function addFeeding(amount,feedType='formula',note=''){
+  state.db.daily.push({id:uid(),type:'feeding',feedType,amount:+amount||state.db.settings.feeding.defaultAmount,time:new Date().toISOString(),note});
+}
+function addDiaper(diaperType='pee',note=''){
+  state.db.daily.push({id:uid(),type:'diaper',diaperType,time:new Date().toISOString(),note});
+}
+
+/* ---------- AI engine ---------- */
+function dataSnapshot(){
+  const b=state.db.baby, g=latestGrowth(), s=dailyStats();
+  return `宝贝档案：${b.name}，${b.gender==='girl'?'女宝':'男宝'}，生日${b.birthday}，现在${ageText(b.birthday)}（第${daysOld(b.birthday)}天）。`
+    +`最新身高${g?.height}cm，体重${g?.weight}kg。`
+    +`今日已喂奶${s.feeds.length}次共${s.totalMl}ml（目标${s.target}ml），换尿布 尿${s.pee}次/便${s.poop}次，`
+    +`距上次喂奶${s.lastFeed?since(s.lastFeed.time):'—'}。`
+    +`里程碑${state.db.milestones.length}个，相册${state.db.albums.length}本，日记${state.db.diary.length}篇，留言${state.db.messages.filter(m=>m.status==='approved').length}条。`;
+}
+function localAnswer(text){
+  const q=text.trim(), b=state.db.baby;
+  const has=(...k)=>k.some(x=>q.includes(x));
+  // actions (need login)
+  const mFeed=q.match(/(记录|记一笔|添加|加).*?喂奶|喂奶.*?(\d+)|喝了?\s*(\d+)\s*(ml|毫升|亳升)/);
+  if((has('记录','记一笔','添加')&&has('喂奶','奶'))||/喂奶.*\d+/.test(q)){
+    if(!state.session.loggedIn) return {reply:'记录数据需要先登录后台哦，登录后我就能帮你记啦～'};
+    const num=(q.match(/(\d{2,4})/)||[])[1];
+    const bt=has('母乳','亲喂')?'breast':'formula';
+    addFeeding(num||state.db.settings.feeding.defaultAmount,bt);
+    const s=dailyStats();
+    return {reply:`已记录一次喂奶 ${num||state.db.settings.feeding.defaultAmount}ml ✅ 今天累计 ${s.totalMl}ml / ${s.target}ml。`};
+  }
+  if(has('换尿布','尿布','拉了','便便','粑粑')&&has('记录','添加','记一笔')){
+    if(!state.session.loggedIn) return {reply:'记录数据需要先登录后台哦～'};
+    const dt=has('便','粑','拉')?'poop':'pee'; addDiaper(dt);
+    return {reply:`已记录一次换尿布（${dt==='poop'?'大便':'小便'}）✅`};
+  }
+  // queries
+  if(has('几岁','多大','年龄','几个月')) return {reply:`${b.name}现在 ${ageText(b.birthday)}，已经陪伴我们 ${daysOld(b.birthday)} 天啦 🎉`};
+  if(has('多高','身高')){const g=latestGrowth();return {reply:`${b.name}最新身高是 ${g?.height} cm（${fmtDate(g?.date)}测量）📏`};}
+  if(has('多重','体重','几斤','几公斤')){const g=latestGrowth();return {reply:`${b.name}最新体重是 ${g?.weight} kg（约${(g?.weight*2).toFixed(1)}斤）⚖️`};}
+  if(has('上次喂','多久没','距离上次','上顿')){const s=dailyStats();return {reply:s.lastFeed?`距离上次喂奶已经 ${since(s.lastFeed.time)} 了（上次 ${s.lastFeed.amount||''}ml）🍼`:'今天还没有喂奶记录哦。'};}
+  if(has('今天','今日')&&has('奶','喂','喝')){const s=dailyStats();return {reply:`今天已喂奶 ${s.feeds.length} 次，共 ${s.totalMl}ml，完成每日目标的 ${s.pct}%（目标 ${s.target}ml）。`};}
+  if(has('尿布','便便','大便','小便')){const s=dailyStats();return {reply:`今天换尿布情况：小便 ${s.pee} 次，大便 ${s.poop} 次 👶`};}
+  if(has('里程碑','最近','大事')){const m=state.db.milestones.slice().sort((a,b)=>new Date(b.date)-new Date(a.date))[0];return {reply:m?`最近的里程碑是「${m.title}」（${fmtDate(m.date)}）：${m.desc}`:'还没有里程碑记录。'};}
+  if(has('相册','照片','多少张')){const n=state.db.albums.reduce((s,a)=>s+a.photos.length,0);return {reply:`目前有 ${state.db.albums.length} 本相册，共 ${n} 张照片 📸`};}
+  if(has('日记')) return {reply:`已经写了 ${state.db.diary.length} 篇成长日记，记录着每一个温柔的瞬间 📖`};
+  if(has('留言')){const n=state.db.messages.filter(m=>m.status==='approved').length;return {reply:`留言墙上有 ${n} 条祝福留言 💌`};}
+  if(has('你好','您好','hi','hello','在吗')) return {reply:`你好呀！我是${b.name}的成长小助手 🍼 你可以问我："宝宝多大了？""最新身高体重？""距上次喂奶多久？"，登录后还能让我帮你记录喂奶。`};
+  if(has('帮助','能做什么','会什么','怎么用')) return {reply:'我可以帮你：\n· 查询年龄/身高/体重\n· 今日喂奶与尿布统计\n· 距上次喂奶时间\n· 最近里程碑、相册与留言\n· （登录后）语音记录喂奶/换尿布\n填入大模型 Key 后还能自然对话哦～'};
+  return {reply:`我暂时不太确定怎么回答"${q}"。可以试试问我年龄、身高体重、喂奶统计或最近里程碑；或在后台"显示设置"填入大模型 API Key 开启自然语言对话。`,unknown:true};
+}
+async function llmAnswer(history){
+  const cfg=state.db.settings.ai;
+  const sys=`你是"${state.db.baby.name}"的成长记录网站里的智能助手，用简体中文、亲切温暖地回答。以下是实时数据，请据此回答：\n${dataSnapshot()}\n若用户想新增/修改数据，提示他们在后台操作（演示版仅支持问答与本地指令）。`;
+  const msgs=[{role:'system',content:sys},...history.slice(-8)];
+  const res=await fetch(cfg.baseUrl.replace(/\/$/,'')+'/chat/completions',{
+    method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg.apiKey},
+    body:JSON.stringify({model:cfg.model,messages:msgs,temperature:0.6})
+  });
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  const j=await res.json(); return j.choices?.[0]?.message?.content?.trim()||'（未返回内容）';
+}
+/* ---------- router + lightbox globals ---------- */
+const NAV=[['home','首页','🏠'],['timeline','成长时间线','📅'],['gallery','照片画廊','📷'],['videos','成长视频','🎬'],['growth','成长曲线','📈'],['vaccine','疫苗接种','💉'],['daily','日常记录','🍼'],['diary','成长日记','📖'],['messages','留言墙','💌'],['about','关于','👶']];
+const route=reactive({name:'home',params:{}});
+function go(name,params={}){route.name=name;route.params=params;state.mobileMenu=false;location.hash=name+(params.id?('/'+params.id):'');window.scrollTo({top:0,behavior:'smooth'});}
+function parseHash(){const h=location.hash.replace(/^#/,'').split('/');if(h[0]){route.name=h[0];route.params=h[1]?{id:h[1]}:{};}}
+const lb=reactive({open:false,list:[],i:0,editable:false});
+const uploadState = reactive({active:false,pct:0,label:'',index:0,total:0});
+const confirmState = reactive({open:false,message:'',_resolve:null});
+function confirmDialog(message){return new Promise(res=>{confirmState.message=message;confirmState._resolve=res;confirmState.open=true;});}
+function confirmYes(){confirmState.open=false;const r=confirmState._resolve;confirmState._resolve=null;if(r)r(true);}
+function confirmNo(){confirmState.open=false;const r=confirmState._resolve;confirmState._resolve=null;if(r)r(false);}
+function saveMediaEdit(item){ /* 本地：改动经深度 watch 自动持久化 */ }
+function saveVideoEdit(item){ }
+function openLightbox(list,i,editable){lb.list=list;lb.i=i;lb.open=true;lb.editable=!!editable;}
+let _io; function observeReveals(){nextTick(()=>{if(_io)_io.disconnect();_io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('in');}),{threshold:.1});document.querySelectorAll('.reveal:not(.in)').forEach(el=>_io.observe(el));});}
+
+/* ---------- shared components ---------- */
+const SiteNav={ setup(){
+  // 顶部保留的主要栏目；其余归入"更多 ▾"下拉，保持顶部简洁
+  const PRIMARY_KEYS=new Set(['home','timeline','gallery','videos','growth','daily']);
+  const links=computed(()=>NAV.filter(n=>n[0]==='home'||state.db.settings.modules[n[0]]));
+  const primary=computed(()=>links.value.filter(l=>PRIMARY_KEYS.has(l[0])));
+  const more=computed(()=>links.value.filter(l=>!PRIMARY_KEYS.has(l[0])));
+  const moreOpen=ref(false);
+  const inMore=computed(()=>more.value.some(l=>l[0]===route.name));
+  // .nav-links 上的 overflow-x:auto 会剪切内部的下拉浮层，所以桌面用 position:fixed 并按按钮位置动态定位
+  function positionMoreMenu(btn){
+    const menu=btn&&btn.parentElement&&btn.parentElement.querySelector('.more-menu');
+    if(!menu||!btn) return;
+    const r=btn.getBoundingClientRect();
+    menu.style.top=(r.bottom+6)+'px';
+    menu.style.right=Math.max(6,window.innerWidth-r.right)+'px';
+  }
+  async function toggleMore(e){
+    if(e){e.preventDefault();e.stopPropagation();}
+    const willOpen=!moreOpen.value;
+    moreOpen.value=willOpen;
+    if(willOpen&&e&&e.currentTarget){ await nextTick(); positionMoreMenu(e.currentTarget); }
+  }
+  function goItem(name){moreOpen.value=false;go(name);}
+  function toggleMobile(e){if(e){e.stopPropagation();}state.mobileMenu=!state.mobileMenu;}
+  const onDoc=e=>{
+    if(!e.target.closest('.more-wrap'))moreOpen.value=false;
+    if(state.mobileMenu&&!e.target.closest('.nav-links')&&!e.target.closest('.menu-btn'))state.mobileMenu=false;
+  };
+  const onScroll=()=>{if(moreOpen.value)moreOpen.value=false;};
+  // 抽屉打开时锁定背景滚动；ESC 关闭
+  watch(()=>state.mobileMenu,v=>{document.documentElement.classList.toggle('drawer-open',!!v);});
+  const onKey=e=>{if(e.key==='Escape'){if(state.mobileMenu)state.mobileMenu=false;if(moreOpen.value)moreOpen.value=false;}};
+  onMounted(()=>{document.addEventListener('click',onDoc);document.addEventListener('keydown',onKey);window.addEventListener('scroll',onScroll,{passive:true});window.addEventListener('resize',onScroll);});
+  return {links,primary,more,moreOpen,inMore,state,go,goItem,route,logout:doLogout,toggleMore,toggleMobile};
+}, template:`
+<header class="nav"><div class="container">
+  <a class="brand" @click="go('home')" style="cursor:pointer"><span class="logo">🍼</span>{{state.db.baby.name}}的成长记</a>
+  <button class="menu-btn" @click="toggleMobile($event)" :aria-expanded="state.mobileMenu?'true':'false'" aria-controls="site-nav-drawer" aria-label="菜单">☰</button>
+  <nav class="nav-links" id="site-nav-drawer" :class="{open:state.mobileMenu}">
+    <a v-for="l in primary" :key="l[0]" :class="{active:route.name===l[0]}" @click="go(l[0])"><span class="nav-emoji" aria-hidden="true">{{l[2]}}</span>{{l[1]}}</a>
+    <div class="more-wrap" v-if="more.length">
+      <a class="more-btn" :class="{active:inMore||moreOpen}" @click="toggleMore($event)">更多 <span class="carat">▾</span></a>
+      <div class="more-menu" :class="{show:moreOpen}">
+        <a v-for="l in more" :key="l[0]" :class="{active:route.name===l[0]}" @click="goItem(l[0])"><span class="nav-emoji" aria-hidden="true">{{l[2]}}</span>{{l[1]}}</a>
+      </div>
+    </div>
+    <a class="adminlink" :class="{active:route.name==='profile'}" @click="go('profile')">👤 {{state.session.username||'我的'}}</a>
+    <a v-if="state.session.role==='admin'" class="adminlink" :class="{active:route.name.startsWith('admin')}" @click="go('admin')">🔑 后台</a>
+    <a class="adminlink" style="cursor:pointer" @click="logout">🚪 退出</a>
+  </nav>
+</div></header>` };
+
+const SiteFooter={ template:`<footer class="footer container">用 ❤️ 记录成长 · {{new Date().getFullYear()}} · 演示数据存于本地浏览器，可在后台重置</footer>` };
+
+const Lightbox={ setup(){
+  const cur=computed(()=>lb.list[lb.i]||{});
+  const editing=ref(false);
+  const nav=d=>{editing.value=false;lb.i=(lb.i+d+lb.list.length)%lb.list.length;};
+  function close(){editing.value=false;lb.open=false;}
+  function startEdit(){editing.value=true;}
+  async function saveEdit(){try{await saveMediaEdit(cur.value);}catch(e){alert(e.message);}editing.value=false;}
+  const onKey=e=>{if(!lb.open)return;if(e.key==='Escape')close();if(!editing.value){if(e.key==='ArrowLeft')nav(-1);if(e.key==='ArrowRight')nav(1);}};
+  onMounted(()=>window.addEventListener('keydown',onKey));
+  return {lb,cur,nav,close,editing,startEdit,saveEdit,state};
+}, template:`
+<transition name="fade"><div class="lb" v-if="lb.open" @click.self="close">
+  <span class="x" @click="close">✕</span>
+  <span class="arw l" @click="nav(-1)" v-if="lb.list.length>1&&!editing">‹</span>
+  <figure class="lb-fig">
+    <video v-if="isVideo(cur.url)" :src="cur.url" controls autoplay playsinline class="lb-media"></video>
+    <img v-else :src="cur.url" :alt="cur.caption" class="lb-media"/>
+    <figcaption class="lb-cap">
+      <template v-if="editing">
+        <input v-model="cur.caption" placeholder="标题" class="lb-input"/>
+        <textarea v-model="cur.desc" placeholder="描述（可选）" rows="2" class="lb-input"></textarea>
+        <div style="display:flex;gap:8px;justify-content:center;margin-top:8px"><button class="btn gray sm" @click="editing=false">取消</button><button class="btn sm" @click="saveEdit">保存</button></div>
+      </template>
+      <template v-else>
+        <div v-if="cur.caption" class="lb-title">{{cur.caption}}</div>
+        <div v-if="cur.desc" class="lb-desc">{{cur.desc}}</div>
+        <div class="lb-meta"><span>{{lb.i+1}} / {{lb.list.length}}</span><button v-if="lb.editable&&cur.id&&state.session.loggedIn" class="btn ghost sm" @click="startEdit">✏️ 编辑</button></div>
+      </template>
+    </figcaption>
+  </figure>
+  <span class="arw r" @click="nav(1)" v-if="lb.list.length>1&&!editing">›</span>
+</div></transition>` };
+
+const isVideo = u => /\.(mp4|webm|ogg|ogv|mov|m4v)(\?|#|$)/i.test(u||'');
+function thumbUrl(u){ if(typeof u==='string'&&u.startsWith('/uploads/')){ const m=u.match(/\.(jpe?g|png|webp)(\?|#|$)/i); if(m){ const i=u.lastIndexOf('.'); return u.slice(0,i)+'_thumb'+u.slice(i); } } return u; }
+const MediaThumb = { props:['url'], setup(props){ const onErr=e=>{ const full=e.target.getAttribute('data-full'); if(full&&e.target.src!==full) e.target.src=full; }; return { props, isVideo, thumbUrl, onErr }; }, template:`
+<div class="mthumb">
+  <video v-if="isVideo(props.url)" class="mediafill" :src="props.url" muted playsinline preload="metadata"></video>
+  <img v-else class="mediafill" :src="thumbUrl(props.url)" :data-full="props.url" @error="onErr" loading="lazy" alt=""/>
+  <span v-if="isVideo(props.url)" class="playbadge">▶</span>
+</div>` };
+
+/* ---------- HOME ---------- */
+const Home={ setup(){
+  const s=state.db, cfg=computed(()=>s.settings.home);
+  const g=computed(()=>latestGrowth());
+  const stats=computed(()=>dailyStats());
+  const recentMs=computed(()=>s.milestones.slice().sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,3));
+  const recentVideos=computed(()=>(s.videos||[]).slice().sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,3));
+  const vxReminders=computed(()=>(s.vaccines||[]).filter(v=>!v.date).map(v=>({v,i:vxInfo(v)})).filter(x=>x.i.days!=null&&x.i.days<=60).sort((a,b)=>a.i.days-b.i.days).slice(0,4));
+  const slides=computed(()=>{const arr=[];s.albums.forEach(a=>{if(a.photos[0])arr.push({url:a.photos[0].url,cap:a.name});});return arr.slice(0,6);});
+  const ci=ref(0); let timer;
+  onMounted(()=>{timer=setInterval(()=>{if(slides.value.length)ci.value=(ci.value+1)%slides.value.length;},4000);observeReveals();});
+  function daysUntil(dstr){const t=new Date();t.setHours(0,0,0,0);const d=new Date(dstr);d.setHours(0,0,0,0);return Math.round((d-t)/86400000);}
+  const anniv=computed(()=>{const b=s.baby.birthday;if(!b)return [];const bd=new Date(b);if(isNaN(bd))return [];const out=[];const plus=n=>{const d=new Date(bd);d.setDate(d.getDate()+n);return d;};const addm=m=>{const d=new Date(bd);d.setMonth(d.getMonth()+m);return d;};out.push({label:'百天',date:plus(99)});out.push({label:'半岁',date:addm(6)});for(let y=1;y<=8;y++){const d=new Date(bd);d.setFullYear(bd.getFullYear()+y);out.push({label:y+'岁生日',date:d});}return out.map(x=>({label:x.label,date:iso(x.date),days:daysUntil(iso(x.date))})).filter(x=>x.days>=0).sort((a,b)=>a.days-b.days).slice(0,3);});
+  const onthisday=computed(()=>{const t=new Date();const md=(t.getMonth()+1)+'-'+t.getDate();const Y=t.getFullYear();const out=[];const push=(date,icon,title,img)=>{if(!date)return;const d=new Date(date);if(isNaN(d))return;if(((d.getMonth()+1)+'-'+d.getDate())===md&&d.getFullYear()<Y)out.push({date,icon,title,img,years:Y-d.getFullYear()});};s.milestones.forEach(m=>push(m.date,'✨',m.title,m.image));(s.diary||[]).forEach(d=>push(d.date,'📖',d.title,(d.images||[])[0]));(s.videos||[]).forEach(v=>push(v.date,'🎬',v.title,v.cover||v.url));(s.albums||[]).forEach(a=>(a.photos||[]).forEach(p=>push(p.takenAt,'📷',p.caption||a.name,p.url)));return out.sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,6);});
+  return {s,cfg,g,stats,recentMs,recentVideos,vxReminders,anniv,onthisday,slides,ci,ageText,fmtDate,go,daysOld};
+}, template:`
+<div>
+  <section class="hero" v-if="cfg.hero">
+    <div class="hero-bg"></div>
+    <div class="container hero-inner">
+      <div>
+        <span class="tag">🌷 {{ageText(s.baby.birthday)}} · 第 {{daysOld(s.baby.birthday)}} 天</span>
+        <h1 style="margin-top:14px">你好呀，我是<span class="accent">{{s.baby.name}}</span></h1>
+        <p class="lead">{{s.baby.bio}}</p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <button class="btn" @click="go('timeline')">看看我的成长 →</button>
+          <button class="btn ghost" @click="go('gallery')">照片画廊</button>
+        </div>
+        <div class="hero-stats">
+          <div class="s"><b>{{g?g.height:'—'}}<small style="font-size:.9rem">cm</small></b><span>最新身高</span></div>
+          <div class="s"><b>{{g?g.weight:'—'}}<small style="font-size:.9rem">kg</small></b><span>最新体重</span></div>
+          <div class="s"><b>{{s.milestones.length}}</b><span>里程碑</span></div>
+        </div>
+      </div>
+      <div class="hero-photo">
+        <img :src="s.baby.avatar" :alt="s.baby.name" />
+        <div class="hero-badge">🎂 {{fmtDate(s.baby.birthday)}}</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section container" v-if="cfg.carousel && slides.length">
+    <div class="carousel">
+      <div v-for="(sl,i) in slides" :key="i" class="slide" :class="{on:i===ci}" :style="{backgroundImage:'url('+sl.url+')'}"></div>
+      <div class="cap">{{slides[ci]?.cap}}</div>
+      <div class="dots"><i v-for="(sl,i) in slides" :key="i" :class="{on:i===ci}" @click="ci=i"></i></div>
+    </div>
+  </section>
+
+  <section class="section container" v-if="cfg.recap && s.recaps && s.recaps.length">
+    <div class="card reveal" style="padding:26px;background:linear-gradient(135deg,#fff,#fff4f6)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><span style="font-size:1.4rem">📝</span><h3 style="margin:0">{{s.recaps[0].title}}</h3><span style="margin-left:auto;color:var(--c-muted);font-size:.82rem">{{fmtDate(s.recaps[0].createdAt)}}</span></div>
+      <p style="color:#5b5870;white-space:pre-wrap;line-height:1.9">{{s.recaps[0].content}}</p>
+    </div>
+  </section>
+
+  <section class="section container" v-if="cfg.vaccine && vxReminders.length">
+    <h2 class="section-title reveal">💉 疫苗提醒</h2>
+    <div class="grid reveal" style="grid-template-columns:repeat(auto-fit,minmax(230px,1fr))">
+      <div class="card" v-for="x in vxReminders" :key="x.v.id" style="padding:16px;display:flex;align-items:center;gap:12px">
+        <div style="width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-size:1.2rem;background:#e5f4f7;flex:none">💉</div>
+        <div class="grow"><b>{{x.v.name}} 第{{x.v.dose}}剂</b><small style="display:block;color:var(--c-muted)">{{x.i.days<0?('已逾期 '+(-x.i.days)+' 天'):(x.i.days===0?'就在今天':(x.i.days+' 天后到期'))}}</small></div>
+        <span class="pill" :class="x.i.cls">{{x.i.label}}</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="section container" v-if="cfg.countdown && anniv.length">
+    <h2 class="section-title reveal">🎂 纪念日倒计时</h2>
+    <div class="grid reveal" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
+      <div class="card" v-for="(a,i) in anniv" :key="a.label" style="padding:22px;text-align:center">
+        <div style="color:var(--c-muted);font-size:.85rem">{{a.label}}</div>
+        <div style="font-family:'Baloo 2';font-size:2.6rem;color:var(--c-primary-d);line-height:1.15">{{a.days===0?'今天!':a.days}}</div>
+        <div style="color:var(--c-muted);font-size:.8rem">{{a.days===0?'🎉 就是今天':('天后 · '+fmtDate(a.date))}}</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section container" v-if="cfg.onthisday && onthisday.length">
+    <h2 class="section-title reveal">📆 那年今天</h2>
+    <p class="section-sub reveal">往年的这一天，也有这些温柔瞬间</p>
+    <div class="grid ms-grid">
+      <div class="card ms-card reveal" v-for="(o,i) in onthisday" :key="i">
+        <div class="ph" :data-date="o.date?fmtDate(o.date):null"><MediaThumb :url="o.img"/></div>
+        <div class="bd"><div class="dt">{{o.years}} 年前的今天 · {{o.icon}}</div><h4>{{o.title}}</h4><p>{{fmtDate(o.date)}}</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section container" v-if="cfg.milestones">
+    <h2 class="section-title reveal">✨ 最近里程碑</h2>
+    <p class="section-sub reveal">那些值得铭记的第一次</p>
+    <div class="grid ms-grid">
+      <div class="card ms-card reveal" v-for="m in recentMs" :key="m.id" @click="go('timeline')">
+        <div class="ph" :data-date="m.date?fmtDate(m.date):null"><MediaThumb :url="m.image"/></div>
+        <div class="bd"><div class="dt">{{fmtDate(m.date)}} · {{m.category}}</div><h4>{{m.title}}</h4><p>{{m.desc}}</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section container" v-if="cfg.videos && recentVideos.length">
+    <h2 class="section-title reveal">🎬 最新成长视频</h2>
+    <p class="section-sub reveal">会动的珍贵瞬间</p>
+    <div class="grid vid-grid">
+      <div class="card vid-card reveal" v-for="v in recentVideos" :key="v.id" @click="go('videos',{id:v.id})">
+        <div class="vthumb"><MediaThumb :url="v.cover||v.url"/><span class="playbadge">▶</span></div>
+        <div class="bd"><div class="dt">{{fmtDate(v.date)}}</div><h4>{{v.title}}</h4></div>
+      </div>
+    </div>
+    <div class="reveal" style="text-align:center;margin-top:20px"><button class="btn ghost" @click="go('videos')">查看全部视频 →</button></div>
+  </section>
+
+  <section class="section container" v-if="cfg.diary">
+    <div class="card reveal" style="padding:34px;display:grid;grid-template-columns:1fr auto;gap:20px;align-items:center;background:linear-gradient(135deg,#fff,#fff4f6)">
+      <div><h2 style="margin-bottom:8px">📖 成长日记</h2><p style="color:var(--c-muted)">已记录 {{s.diary.length}} 篇温柔的日常，点滴都是爱。</p></div>
+      <button class="btn" @click="go('diary')">翻开日记</button>
+    </div>
+  </section>
+</div>` };
+
+/* ---------- TIMELINE ---------- */
+const Timeline={ setup(){
+  const items=computed(()=>state.db.milestones.slice().sort((a,b)=>new Date(b.date)-new Date(a.date)));
+  const years=computed(()=>['全部',...[...new Set(items.value.map(m=>new Date(m.date).getFullYear()))].sort((a,b)=>b-a)]);
+  const yr=ref('全部');
+  const shown=computed(()=>yr.value==='全部'?items.value:items.value.filter(m=>new Date(m.date).getFullYear()===yr.value));
+  watch([yr,shown],()=>observeReveals()); onMounted(observeReveals);
+  return {items,years,yr,shown,fmtDate,ageText,state,openLightbox};
+}, template:`
+<section class="section container">
+  <h2 class="section-title">📅 成长时间线</h2>
+  <p class="section-sub">一步一步，慢慢长大</p>
+  <div class="yr-filter">
+    <button v-for="y in years" :key="y" :class="{on:yr===y}" @click="yr=y">{{y}}{{y==='全部'?'':'年'}}</button>
+  </div>
+  <div class="tl">
+    <div class="tl-item reveal" v-for="m in shown" :key="m.id">
+      <div class="dot"></div>
+      <div class="card tl-card">
+        <div class="dt">{{fmtDate(m.date)}} · {{ageText(state.db.baby.birthday,new Date(m.date))||'新生'}} · <span class="tag">{{m.category}}</span></div>
+        <h4>{{m.title}}</h4>
+        <p style="color:var(--c-muted)">{{m.desc}}</p>
+        <div class="tl-img" v-if="m.image" :data-date="m.date?fmtDate(m.date):null" @click="openLightbox([{url:m.image,caption:m.title}],0)" style="cursor:pointer"><MediaThumb :url="m.image"/></div>
+      </div>
+    </div>
+  </div>
+</section>` };
+
+/* ---------- GALLERY ---------- */
+const Gallery={ setup(){
+  const albums=computed(()=>state.db.albums);
+  const album=computed(()=>state.db.albums.find(a=>a.id===route.params.id));
+  onMounted(observeReveals); watch(()=>route.params.id,()=>observeReveals());
+  return {albums,album,route,go,fmtDate,openLightbox};
+}, template:`
+<section class="section container">
+  <template v-if="!album">
+    <h2 class="section-title">📷 照片画廊</h2>
+    <p class="section-sub">共 {{albums.length}} 本相册</p>
+    <div class="grid alb-grid">
+      <div class="alb reveal" v-for="a in albums" :key="a.id" @click="go('gallery',{id:a.id})">
+        <MediaThumb :url="a.cover"/>
+        <div class="ov"><h4>{{a.name}}</h4><span>{{fmtDate(a.date)}} · {{a.photos.length}} 张</span></div>
+      </div>
+    </div>
+  </template>
+  <template v-else>
+    <button class="btn ghost sm" @click="go('gallery')">← 返回相册</button>
+    <h2 class="section-title" style="margin-top:16px">{{album.name}}</h2>
+    <p class="section-sub">{{album.desc}} · {{fmtDate(album.date)}}</p>
+    <div class="grid photos">
+      <div class="p reveal" v-for="(p,i) in album.photos" :key="p.id" :data-date="p.takenAt?fmtDate(p.takenAt):null" @click="openLightbox(album.photos,i,true)"><MediaThumb :url="p.url"/></div>
+    </div>
+  </template>
+</section>` };
+const WHO={
+ girl:{M:[0,1,2,3,4,6,9,12,15,18,21,24],
+  height:{p3:[45.6,50.0,53.2,55.6,57.8,61.2,65.3,68.9,72.0,74.9,77.5,80.0],p50:[49.1,53.7,57.1,59.8,62.1,65.7,70.1,74.0,77.5,80.7,83.7,86.4],p97:[52.7,57.4,61.1,64.0,66.4,70.3,74.9,79.2,83.0,86.5,89.8,92.9]},
+  weight:{p3:[2.4,3.2,4.0,4.5,5.0,5.7,6.5,7.0,7.6,8.1,8.6,9.0],p50:[3.2,4.2,5.1,5.8,6.4,7.3,8.2,8.9,9.6,10.2,10.9,11.5],p97:[4.2,5.5,6.6,7.5,8.2,9.3,10.5,11.5,12.4,13.2,14.0,14.8]}},
+ boy:{M:[0,1,2,3,4,6,9,12,15,18,21,24],
+  height:{p3:[46.1,50.8,54.4,57.3,59.7,63.3,67.5,71.0,74.2,76.9,79.4,81.7],p50:[49.9,54.7,58.4,61.4,63.9,67.6,72.0,75.7,79.1,82.3,85.1,87.8],p97:[53.7,58.6,62.4,65.5,68.0,71.9,76.5,80.5,84.0,87.7,90.8,93.9]},
+  weight:{p3:[2.5,3.4,4.4,5.0,5.6,6.4,7.1,7.7,8.3,8.8,9.2,9.7],p50:[3.3,4.5,5.6,6.4,7.0,7.9,8.9,9.6,10.3,10.9,11.5,12.2],p97:[4.3,5.8,7.1,8.0,8.7,9.8,11.0,12.0,12.9,13.7,14.5,15.3]}}
+};
+/* ---------- GROWTH ---------- */
+const Growth={ setup(){
+  const rows=computed(()=>sortedGrowth());
+  const el=ref(null); let chart;
+  function render(){
+    if(!el.value)return; if(!chart)chart=echarts.init(el.value);
+    const t=state.db.settings.theme, r=rows.value, b=state.db.baby;
+    chart.setOption({
+      tooltip:{trigger:'axis'},
+      legend:{data:['身高 (cm)','体重 (kg)'],bottom:0},
+      grid:{left:52,right:52,top:30,bottom:46},
+      xAxis:{type:'category',boundaryGap:false,data:r.map(x=>ageText(b.birthday,new Date(x.date))||'出生'),axisLabel:{color:'#8f8ba0'}},
+      yAxis:[{type:'value',name:'cm',scale:true,axisLabel:{color:'#8f8ba0'},splitLine:{lineStyle:{color:'#f0e3dd'}}},
+             {type:'value',name:'kg',scale:true,axisLabel:{color:'#8f8ba0'},splitLine:{show:false}}],
+      series:[
+        {name:'身高 (cm)',type:'line',smooth:true,symbolSize:7,data:r.map(x=>x.height),
+         itemStyle:{color:t.primary},lineStyle:{width:3,color:t.primary},
+         areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:t.primary+'55'},{offset:1,color:t.primary+'05'}])}},
+        {name:'体重 (kg)',type:'line',yAxisIndex:1,smooth:true,symbolSize:7,data:r.map(x=>x.weight),
+         itemStyle:{color:t.secondary},lineStyle:{width:3,color:t.secondary}}
+      ]
+    });
+  }
+  const metric=ref('height'); const pel=ref(null); let chart2;
+  function monthsAt(d){const b=new Date(state.db.baby.birthday);const x=new Date(d);if(isNaN(b)||isNaN(x))return 0;return (x-b)/(30.44*86400000);}
+  function renderPct(){
+    if(!pel.value)return; if(!chart2)chart2=echarts.init(pel.value);
+    const t=state.db.settings.theme; const sex=state.db.baby.gender==='boy'?'boy':'girl'; const w=WHO[sex]; const m=metric.value;
+    const line=(name,arr,color,dashed)=>({name,type:'line',smooth:true,showSymbol:false,data:w.M.map((mo,i)=>[mo,arr[i]]),lineStyle:{color,width:1.5,type:dashed?'dashed':'solid',opacity:.75},itemStyle:{color},z:1});
+    const baby=rows.value.filter(r=>r[m]!=null).map(r=>[+monthsAt(r.date).toFixed(2),r[m]]).sort((a,b)=>a[0]-b[0]);
+    chart2.setOption({
+      tooltip:{trigger:'axis'},legend:{bottom:0,textStyle:{color:'#8f8ba0'}},
+      grid:{left:48,right:20,top:22,bottom:46},
+      xAxis:{type:'value',name:'月龄',min:0,axisLabel:{color:'#8f8ba0'},splitLine:{show:false}},
+      yAxis:{type:'value',name:m==='height'?'cm':'kg',scale:true,axisLabel:{color:'#8f8ba0'},splitLine:{lineStyle:{color:'#f0e3dd'}}},
+      series:[
+        line('P97',w[m].p97,'#cbd6da',true),
+        line('P50 中位',w[m].p50,'#9bb0b7',false),
+        line('P3',w[m].p3,'#cbd6da',true),
+        {name:state.db.baby.name+' 实测',type:'line',smooth:true,symbolSize:8,data:baby,itemStyle:{color:t.primary},lineStyle:{width:3,color:t.primary},z:3}
+      ]
+    });
+  }
+  const onResize=()=>{chart&&chart.resize();chart2&&chart2.resize();};
+  onMounted(()=>{render();renderPct();window.addEventListener('resize',onResize);observeReveals();});
+  watch(rows,()=>nextTick(()=>{render();renderPct();}),{deep:true});
+  watch(metric,()=>nextTick(renderPct));
+  return {rows,el,pel,metric,fmtDate,ageText,state};
+}, template:`
+<section class="section container">
+  <h2 class="section-title">📈 成长曲线</h2>
+  <p class="section-sub">身高体重变化趋势</p>
+  <div class="card reveal" style="padding:22px;margin-bottom:26px"><div ref="el" class="chart"></div></div>
+  <div class="card reveal" style="padding:22px;margin-bottom:26px">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <h4>📊 WHO 生长百分位（{{state.db.baby.gender==='boy'?'男':'女'}}宝）</h4>
+      <div class="yr-filter" style="margin:0"><button :class="{on:metric==='height'}" @click="metric='height'">身高</button><button :class="{on:metric==='weight'}" @click="metric='weight'">体重</button></div>
+    </div>
+    <p class="section-sub" style="margin:6px 0 4px">虚线为 WHO 参考区间（P3 · P50 中位 · P97），实线为{{state.db.baby.name}}实测。仅供参考，请以医生评估为准。</p>
+    <div ref="pel" class="chart"></div>
+  </div>
+  <div class="card reveal" style="padding:8px 4px;overflow:auto">
+    <table class="tbl"><thead><tr><th>日期</th><th>月龄</th><th>身高 (cm)</th><th>体重 (kg)</th><th>头围 (cm)</th></tr></thead>
+    <tbody><tr v-for="x in rows.slice().reverse()" :key="x.id">
+      <td>{{fmtDate(x.date)}}</td><td>{{ageText(state.db.baby.birthday,new Date(x.date))||'出生'}}</td>
+      <td>{{x.height}}</td><td>{{x.weight}}</td><td>{{x.head}}</td></tr></tbody></table>
+  </div>
+</section>` };
+
+/* ---------- DAILY ---------- */
+const Daily={ setup(){
+  const tick=ref(0); let t; onMounted(()=>{t=setInterval(()=>tick.value++,30000);observeReveals();});
+  const s=computed(()=>dailyStats());
+  const sinceLast=computed(()=>{tick.value;return s.value.lastFeed?since(s.value.lastFeed.time):'—';});
+  const feedTime=t2=>{const d=new Date(t2);return pad(d.getHours())+':'+pad(d.getMinutes());};
+  return {s,sinceLast,feedTime,fmtMD,state};
+}, template:`
+<section class="section container">
+  <h2 class="section-title">🍼 日常记录</h2>
+  <p class="section-sub">今日喂养与护理概览</p>
+  <div class="stat-row">
+    <div class="card stat reveal"><b>{{s.feeds.length}}</b><span>今日喂奶次数</span></div>
+    <div class="card stat reveal"><b>{{s.totalMl}}<small style="font-size:.9rem">ml</small></b><span>今日总奶量</span></div>
+    <div class="card stat reveal"><b>{{s.pee}}</b><span>小便次数</span></div>
+    <div class="card stat reveal"><b>{{s.poop}}</b><span>大便次数</span></div>
+  </div>
+  <div class="grid" style="grid-template-columns:1fr 1fr;gap:22px;margin-bottom:26px">
+    <div class="card reveal" style="padding:24px">
+      <h4>每日奶量进度</h4>
+      <div class="prog"><i :style="{width:s.pct+'%'}"></i></div>
+      <div style="display:flex;justify-content:space-between;color:var(--c-muted);font-size:.88rem"><span>{{s.totalMl}} ml</span><span>目标 {{s.target}} ml · {{s.pct}}%</span></div>
+    </div>
+    <div class="card reveal" style="padding:24px;text-align:center">
+      <h4 style="text-align:left">距上次喂奶</h4>
+      <div class="feed-timer" style="margin:10px 0">{{sinceLast}}</div>
+      <span style="color:var(--c-muted);font-size:.86rem">{{s.lastFeed?('上次 '+(s.lastFeed.amount||'')+'ml · '+feedTime(s.lastFeed.time)):'今天还没喂奶'}}</span>
+    </div>
+  </div>
+  <h4 class="reveal" style="margin-bottom:12px">📋 今日时间线</h4>
+  <div class="reveal">
+    <div class="log" v-for="l in s.today" :key="l.id">
+      <div class="ic" :class="l.type==='feeding'?'feed':(l.diaperType==='poop'?'poop':'pee')">{{l.type==='feeding'?'🍼':(l.diaperType==='poop'?'💩':'💧')}}</div>
+      <div class="grow"><b>{{l.type==='feeding'?('喂奶 '+(l.amount||'')+'ml · '+(l.feedType==='breast'?'母乳':'配方奶')):('换尿布 · '+(l.diaperType==='poop'?'大便':'小便'))}}</b>
+      <small>{{l.note||'—'}}</small></div>
+      <span style="color:var(--c-muted)">{{feedTime(l.time)}}</span>
+    </div>
+    <p v-if="!s.today.length" style="color:var(--c-muted);text-align:center;padding:20px">今天还没有记录，去后台或用 AI 助手添加一条吧～</p>
+  </div>
+</section>` };
+
+/* ---------- DIARY ---------- */
+const Diary={ setup(){
+  const list=computed(()=>state.db.diary.slice().sort((a,b)=>new Date(b.date)-new Date(a.date)));
+  const entry=computed(()=>state.db.diary.find(d=>d.id===route.params.id));
+  onMounted(observeReveals); watch(()=>route.params.id,()=>observeReveals());
+  return {list,entry,route,go,fmtDate,openLightbox};
+}, template:`
+<section class="section container">
+  <template v-if="!entry">
+    <h2 class="section-title">📖 成长日记</h2>
+    <p class="section-sub">写给未来的你</p>
+    <div class="grid diary-grid">
+      <div class="card diary reveal" v-for="d in list" :key="d.id" @click="go('diary',{id:d.id})" style="cursor:pointer;overflow:hidden">
+        <div class="ph" v-if="d.images&&d.images[0]" :data-date="d.date?fmtDate(d.date):null"><MediaThumb :url="d.images[0]"/></div>
+        <div class="bd"><div class="dt">{{fmtDate(d.date)}}</div><h3>{{d.title}}</h3><p>{{d.content.slice(0,60)}}…</p></div>
+      </div>
+    </div>
+  </template>
+  <template v-else>
+    <button class="btn ghost sm" @click="go('diary')">← 返回日记</button>
+    <article class="card reveal" style="padding:34px;max-width:760px;margin:18px auto 0">
+      <div class="dt" style="color:var(--c-secondary-d);font-weight:700">{{fmtDate(entry.date)}}</div>
+      <h2 style="margin:6px 0 18px">{{entry.title}}</h2>
+      <p style="white-space:pre-wrap;color:#5b5870;line-height:1.9">{{entry.content}}</p>
+      <div class="grid" style="grid-template-columns:repeat(2,1fr);margin-top:20px" v-if="entry.images&&entry.images.length">
+        <div v-for="(im,i) in entry.images" :key="i" @click="openLightbox(entry.images.map(u=>({url:u,caption:entry.title})),i)" style="position:relative;aspect-ratio:16/10;border-radius:14px;overflow:hidden;cursor:pointer;background:#f3e7e2"><video v-if="isVideo(im)" class="mediafill" :src="im" muted playsinline preload="metadata"></video><img v-else :src="im" style="width:100%;height:100%;object-fit:cover"/><span v-if="isVideo(im)" class="playbadge">▶</span></div>
+      </div>
+    </article>
+  </template>
+</section>` };
+
+/* ---------- MESSAGES ---------- */
+const Messages={ setup(){
+  const approved=computed(()=>state.db.messages.filter(m=>m.status==='approved').sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)));
+  const form=reactive({name:'',content:''}); const done=ref(false);
+  const colors=['#ef8fa4','#7fc8d4','#ffca7a','#9b8cff','#6dc38f'];
+  function submit(){if(!form.name.trim()||!form.content.trim())return;
+    state.db.messages.push({id:uid(),name:form.name,content:form.content,createdAt:new Date().toISOString(),status:'pending',color:colors[Math.floor(Math.random()*colors.length)]});
+    form.name='';form.content='';done.value=true;setTimeout(()=>done.value=false,4000);}
+  onMounted(observeReveals);
+  return {approved,form,submit,done,fmtMD,since};
+}, template:`
+<section class="section container">
+  <h2 class="section-title">💌 留言墙</h2>
+  <p class="section-sub">给宝贝留下一句祝福（审核后展示）</p>
+  <div class="card reveal" style="padding:22px;margin-bottom:30px;max-width:640px">
+    <div class="row2"><div class="field"><label>你的称呼</label><input v-model="form.name" placeholder="如：外婆 / 朋友 小李"/></div>
+    <div class="field" style="display:flex;align-items:flex-end"><button class="btn" style="width:100%" @click="submit">送出祝福 💝</button></div></div>
+    <div class="field" style="margin:0"><label>祝福的话</label><textarea v-model="form.content" rows="2" placeholder="写点什么给宝贝吧…"></textarea></div>
+    <p v-if="done" style="color:#2f855a;margin-top:10px">✅ 已提交，待管理员审核后就会出现在留言墙上啦～</p>
+  </div>
+  <div class="grid msg-grid">
+    <div class="card msg reveal" v-for="m in approved" :key="m.id">
+      <div class="who"><span class="av" :style="{background:m.color}">{{m.name.slice(0,1)}}</span><b>{{m.name}}</b></div>
+      <p>{{m.content}}</p><div class="t">{{fmtMD(m.createdAt)}} · {{since(m.createdAt)}}前</div>
+    </div>
+  </div>
+</section>` };
+
+/* ---------- ABOUT ---------- */
+const About={ setup(){ onMounted(observeReveals); return {state,ageText,fmtDate,daysOld}; },
+ template:`
+<section class="section container">
+  <h2 class="section-title">👶 关于{{state.db.baby.name}}</h2>
+  <div class="card reveal" style="padding:30px;margin-top:10px">
+    <div class="about-hero">
+      <div class="av"><img :src="state.db.baby.avatar" style="width:100%;height:100%;object-fit:cover"/></div>
+      <div>
+        <h1 style="font-size:2.2rem">{{state.db.baby.name}}</h1>
+        <p style="margin:10px 0"><span class="tag">{{state.db.baby.gender==='girl'?'👧 女宝宝':'👦 男宝宝'}}</span>
+        <span class="tag" style="background:rgba(255,202,122,.25);color:#b5822a">🎂 {{fmtDate(state.db.baby.birthday)}}</span>
+        <span class="tag">{{ageText(state.db.baby.birthday)}} · 第{{daysOld(state.db.baby.birthday)}}天</span></p>
+        <p style="color:#5b5870;line-height:1.9">{{state.db.baby.bio}}</p>
+      </div>
+    </div>
+    <hr style="border:none;border-top:1px dashed var(--c-line);margin:26px 0"/>
+    <h3>👨‍👩‍👧 我们的家</h3>
+    <p style="color:#5b5870;margin-top:8px">{{state.db.baby.family}}</p>
+  </div>
+</section>` };
+/* ---------- VIDEOS ---------- */
+const Videos={ setup(){
+  const list=computed(()=>state.db.videos||[]);
+  const cur=computed(()=>list.value.find(v=>String(v.id)===String(route.params.id)));
+  const vedit=ref(false);
+  async function saveVideo(){try{await saveVideoEdit(cur.value);}catch(e){alert(e.message);}vedit.value=false;}
+  onMounted(observeReveals); watch(()=>route.params.id,()=>{vedit.value=false;observeReveals();});
+  return {list,cur,route,go,fmtDate,vedit,saveVideo,state};
+}, template:`
+<section class="section container">
+  <template v-if="!cur">
+    <h2 class="section-title">\ud83c\udfac 成长视频</h2>
+    <p class="section-sub">共 {{list.length}} 个视频 · 那些会动的珍贵瞬间</p>
+    <div class="grid vid-grid">
+      <div class="card vid-card reveal" v-for="v in list" :key="v.id" @click="go('videos',{id:v.id})">
+        <div class="vthumb"><MediaThumb :url="v.cover||v.url"/><span class="playbadge">▶</span></div>
+        <div class="bd"><div class="dt">{{fmtDate(v.date)}}</div><h4>{{v.title}}</h4><p>{{v.desc}}</p></div>
+      </div>
+    </div>
+    <p v-if="!list.length" style="color:var(--c-muted);text-align:center;padding:30px">还没有视频，去后台上传第一个吧～</p>
+  </template>
+  <template v-else>
+    <button class="btn ghost sm" @click="go('videos')">← 返回视频</button>
+    <div class="card reveal" style="padding:18px;max-width:900px;margin:16px auto 0">
+      <video :src="cur.url" :poster="cur.cover||''" controls autoplay playsinline style="display:block;margin:0 auto;max-width:100%;max-height:72vh;width:auto;border-radius:14px;background:#000"></video>
+      <div style="padding:10px 4px 0">
+        <div class="dt" style="color:var(--c-secondary-d);font-weight:700">{{fmtDate(cur.date)}}</div>
+        <template v-if="vedit">
+          <input v-model="cur.title" placeholder="标题" style="font-size:1.15rem;font-weight:700;width:100%;padding:9px 11px;border:1.5px solid var(--c-line);border-radius:10px;margin:6px 0"/>
+          <textarea v-model="cur.desc" placeholder="描述" rows="3" style="width:100%;padding:9px 11px;border:1.5px solid var(--c-line);border-radius:10px"></textarea>
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px"><button class="btn gray sm" @click="vedit=false">取消</button><button class="btn sm" @click="saveVideo">保存</button></div>
+        </template>
+        <template v-else>
+          <h2 style="margin:4px 0 8px">{{cur.title}}</h2><p style="color:#5b5870;white-space:pre-wrap">{{cur.desc}}</p>
+          <button v-if="state.session.loggedIn" class="btn ghost sm" @click="vedit=true">✏️ 编辑标题/描述</button>
+        </template>
+      </div>
+    </div>
+    <div class="grid vid-grid" style="max-width:900px;margin:22px auto 0" v-if="list.length>1">
+      <div class="card vid-card" v-for="v in list.filter(x=>x.id!==cur.id)" :key="v.id" @click="go('videos',{id:v.id})">
+        <div class="vthumb"><MediaThumb :url="v.cover||v.url"/><span class="playbadge">▶</span></div>
+        <div class="bd"><h4>{{v.title}}</h4></div>
+      </div>
+    </div>
+  </template>
+</section>` };
+
+const Profile={ setup(){
+  const f=reactive({old:'',n1:'',n2:''}); const msg=ref(''); const ok=ref(false); const busy=ref(false);
+  const uname=computed(()=>state.session.username); const role=computed(()=>state.session.role);
+  function submit(){msg.value='';const u=(state.db.users||[]).find(x=>x.username===state.session.username);if(!u||u.password!==f.old){ok.value=false;msg.value='当前密码不正确';return;}if(f.n1.length<4){ok.value=false;msg.value='新密码至少 4 位';return;}if(f.n1!==f.n2){ok.value=false;msg.value='两次输入的新密码不一致';return;}u.password=f.n1;ok.value=true;msg.value='✅ 密码已更新';f.old=f.n1=f.n2='';}
+  onMounted(observeReveals);
+  return {f,msg,ok,busy,uname,role,submit};
+}, template:`
+<section class="section container">
+  <h2 class="section-title">👤 个人资料</h2>
+  <div class="card reveal" style="padding:26px;max-width:520px">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px">
+      <span style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--c-primary),var(--c-accent));display:grid;place-items:center;color:#fff;font-weight:700;font-size:1.4rem">{{(uname||'?').slice(0,1).toUpperCase()}}</span>
+      <div><b style="font-size:1.15rem">{{uname}}</b><div style="color:var(--c-muted);font-size:.9rem">{{role==='admin'?'管理员':'家庭成员'}}</div></div>
+    </div>
+    <hr style="border:none;border-top:1px dashed var(--c-line);margin:0 0 18px"/>
+    <h4 style="margin-bottom:12px">🔒 修改密码</h4>
+    <div class="field"><label>当前密码</label><input type="password" v-model="f.old" @keyup.enter="submit"/></div>
+    <div class="field"><label>新密码（至少 4 位）</label><input type="password" v-model="f.n1" @keyup.enter="submit"/></div>
+    <div class="field"><label>确认新密码</label><input type="password" v-model="f.n2" @keyup.enter="submit"/></div>
+    <p v-if="msg" :style="{color: ok?'#2f855a':'#e0576a',margin:'0 0 12px'}">{{msg}}</p>
+    <button class="btn" :disabled="busy" @click="submit">保存新密码</button>
+  </div>
+</section>` };
+
+const ShareView={ setup(){
+  const album=ref(null); const baby=ref(state.db.baby.name); const err=ref(''); const loading=ref(false);
+  onMounted(()=>{const sh=(state.db.shares||[]).find(x=>x.token===route.params.id);if(!sh){err.value='分享链接无效或已撤销';}else if(sh.expiresAt&&new Date(sh.expiresAt)<new Date()){err.value='分享链接已过期';}else{const a=(state.db.albums||[]).find(x=>String(x.id)===String(sh.albumId));if(!a){err.value='相册不存在';}else{album.value=a;}}observeReveals();});
+  return {album,baby,err,loading,openLightbox,fmtDate};
+}, template:`
+<div>
+  <header class="nav"><div class="container"><a class="brand"><span class="logo">🍼</span>{{baby||'宝贝'}}的相册</a></div></header>
+  <section class="section container">
+    <div v-if="loading" style="text-align:center;padding:50px;color:var(--c-muted)">加载中…</div>
+    <div v-else-if="err" style="text-align:center;padding:60px 20px"><div style="font-size:2.6rem">🔒</div><h3 style="margin:10px 0 6px">{{err}}</h3><p style="color:var(--c-muted)">请向分享者索取新的链接。</p></div>
+    <template v-else-if="album">
+      <h2 class="section-title">📷 {{album.name}}</h2>
+      <p class="section-sub">{{album.desc}}<template v-if="album.date"> · {{fmtDate(album.date)}}</template> · 共 {{album.photos.length}} 项</p>
+      <div class="grid photos">
+        <div class="p reveal" v-for="(p,i) in album.photos" :key="p.id" :data-date="p.takenAt?fmtDate(p.takenAt):null" @click="openLightbox(album.photos,i)"><MediaThumb :url="p.url"/></div>
+      </div>
+      <p style="text-align:center;color:var(--c-muted);font-size:.85rem;margin-top:34px">来自「{{baby}}的成长记」· 家庭私密分享</p>
+    </template>
+  </section>
+</div>` };
+
+/* ---------- VACCINE ---------- */
+const Vaccine={ setup(){
+  const list=computed(()=>(state.db.vaccines||[]).slice().sort((a,b)=>(a.plannedMonth-b.plannedMonth)||(''+a.name).localeCompare(b.name)));
+  const done=computed(()=>list.value.filter(v=>v.date).length);
+  const pct=computed(()=>list.value.length?Math.round(done.value/list.value.length*100):0);
+  onMounted(observeReveals);
+  return {list,done,pct,state,fmtDate};
+}, template:`
+<section class="section container">
+  <h2 class="section-title">💉 疫苗接种</h2>
+  <p class="section-sub">国家免疫规划参考 · 已完成 {{done}}/{{list.length}}（{{pct}}%）</p>
+  <div class="card reveal" style="padding:18px;margin-bottom:20px" v-if="list.length"><div class="prog"><i :style="{width:pct+'%'}"></i></div></div>
+  <div class="reveal">
+    <div class="log" v-for="v in list" :key="v.id">
+      <div class="ic feed">💉</div>
+      <div class="grow"><b>{{v.name}} <span style="color:var(--c-muted);font-weight:400;font-size:.85rem">第{{v.dose}}剂</span></b><small>建议 {{vxMonLabel(v.plannedMonth)}}<template v-if="v.date"> · 已于 {{fmtDate(v.date)}} 接种</template><template v-else-if="vxInfo(v).due"> · 应于 {{fmtDate(vxInfo(v).due)}}</template></small></div>
+      <span class="pill" :class="vxInfo(v).cls">{{vxInfo(v).label}}</span>
+    </div>
+    <p v-if="!list.length" style="color:var(--c-muted);text-align:center;padding:30px">还没有疫苗计划，管理员可在后台「疫苗管理」载入标准免疫程序。</p>
+  </div>
+</section>` };
+
+/* ---------- admin helpers ---------- */
+const IMG_EXT=['jpg','jpeg','png','gif','webp','bmp','svg','avif','heic'];
+const VID_EXT=['mp4','webm','ogg','ogv','mov','m4v','mkv'];
+const UPLOAD_LIMITS_DEFAULT={imageMB:10,videoMB:200};
+function fileKind(f){const ext=(f.name.split('.').pop()||'').toLowerCase();const ct=(f.type||'').toLowerCase();if(IMG_EXT.includes(ext)||ct.startsWith('image/'))return 'image';if(VID_EXT.includes(ext)||ct.startsWith('video/'))return 'video';return null;}
+function checkFile(f){const lim=(state.db&&state.db.limits)||UPLOAD_LIMITS_DEFAULT;const k=fileKind(f);if(!k)return{ok:false,msg:'不支持的文件类型：'+f.name+'（仅支持图片和视频）'};const mb=k==='image'?(lim.imageMB||10):(lim.videoMB||200);if(f.size>mb*1024*1024)return{ok:false,msg:'文件过大：'+f.name+'（'+(k==='image'?'图片':'视频')+'上限 '+mb+'MB，当前 '+(f.size/1048576).toFixed(1)+'MB）'};return{ok:true};}
+function pickFile(cb){const i=document.createElement('input');i.type='file';i.accept='image/*,video/*';i.onchange=e=>{const f=e.target.files[0];if(!f)return;const v=checkFile(f);if(!v.ok){alert(v.msg);return;}uploadState.active=true;uploadState.pct=0;uploadState.label=f.name;uploadState.index=1;uploadState.total=1;const r=new FileReader();r.onprogress=ev=>{if(ev.lengthComputable)uploadState.pct=Math.round(ev.loaded/ev.total*100);};r.onload=()=>{uploadState.pct=100;uploadState.active=false;cb(r.result);};r.onerror=()=>{uploadState.active=false;alert('读取失败');};r.readAsDataURL(f);};i.click();}
+function pickFiles(cb){const i=document.createElement('input');i.type='file';i.accept='image/*,video/*';i.multiple=true;i.onchange=e=>{const fs=[...e.target.files];if(!fs.length)return;const bad=fs.map(checkFile).find(v=>!v.ok);if(bad){alert(bad.msg);return;}uploadState.active=true;uploadState.total=fs.length;let idx=0;const next=()=>{if(idx>=fs.length){uploadState.active=false;return;}const f=fs[idx];uploadState.index=idx+1;uploadState.label=f.name;uploadState.pct=0;const r=new FileReader();r.onprogress=ev=>{if(ev.lengthComputable)uploadState.pct=Math.round(ev.loaded/ev.total*100);};r.onload=()=>{cb(r.result);idx++;next();};r.onerror=()=>{idx++;next();};r.readAsDataURL(f);};next();};i.click();}
+const ADMIN_TABS=[['overview','概览','📊'],['baby','宝贝信息','👶'],['milestones','里程碑','✨'],['albums','相册','📷'],['videos','成长视频','🎬'],['growth','身高体重','📈'],['daily','日常记录','🍼'],['vaccine','疫苗','💉'],['diary','日记','📖'],['messages','留言审核','💌'],['recap','AI 小结','📝'],['settings','显示设置','⚙️'],['members','成员管理','👥'],['invites','邀请码','🎟️']];
+const adminTab=ref('overview');
+
+/* ---------- LOGIN ---------- */
+const Login={ setup(){
+  const form=reactive({u:'',p:'',remember:false}); const err=ref('');
+  onMounted(()=>{try{const r=JSON.parse(LS.getItem('bgt_remember')||'null');if(r){form.u=r.u;form.p=r.p;form.remember=true;}}catch(e){}});
+  function login(){const a=state.db.settings.admin;
+    if(form.u===a.username&&form.p===a.password){
+      state.session.loggedIn=true;SS.setItem('bgt_login','1');
+      if(form.remember)LS.setItem('bgt_remember',JSON.stringify({u:form.u,p:form.p}));else LS.removeItem('bgt_remember');
+      go('admin');
+    }else err.value='账号或密码不正确';}
+  return {form,err,login,go};
+}, template:`
+<div class="login-wrap"><div class="card login-card">
+  <div style="text-align:center;margin-bottom:22px"><div style="font-size:2.4rem">🔑</div><h2>后台登录</h2><p style="color:var(--c-muted);font-size:.9rem">管理宝贝的成长记录</p></div>
+  <div class="field"><label>账号</label><input v-model="form.u" @keyup.enter="login" placeholder="用户名"/></div>
+  <div class="field"><label>密码</label><input v-model="form.p" type="password" @keyup.enter="login" placeholder="密码"/></div>
+  <label class="checkline" style="margin-bottom:16px"><input type="checkbox" v-model="form.remember"/> 记住账号密码（明文存于本设备，适合家庭常用设备）</label>
+  <p v-if="err" style="color:#e0576a;margin-bottom:12px">⚠️ {{err}}</p>
+  <button class="btn" style="width:100%" @click="login">登 录</button>
+  <p style="text-align:center;margin-top:6px"><a @click="go('home')" style="color:var(--c-secondary-d);cursor:pointer">← 返回前台</a></p>
+</div></div>` };
+
+/* ---------- ADMIN SHELL ---------- */
+const Admin={ components:{}, setup(){
+  if(!state.session.loggedIn){go('login');}
+  function logout(){state.session.loggedIn=false;SS.removeItem('bgt_login');go('home');}
+  const comp=computed(()=>({overview:'AdOverview',baby:'AdBaby',milestones:'AdMilestones',albums:'AdAlbums',videos:'AdVideos',growth:'AdGrowth',daily:'AdDaily',vaccine:'AdVaccines',diary:'AdDiary',messages:'AdMessages',recap:'AdRecaps',settings:'AdSettings',members:'AdMembers',invites:'AdInvites'}[adminTab.value]));
+  const pending=computed(()=>state.db.messages.filter(m=>m.status==='pending').length);
+  return {ADMIN_TABS,adminTab,comp,logout,state,go,pending};
+}, template:`
+<section class="section container">
+  <div class="admin">
+    <aside class="card side">
+      <a v-for="t in ADMIN_TABS" :key="t[0]" :class="{active:adminTab===t[0]}" @click="adminTab=t[0]">
+        <span>{{t[2]}}</span>{{t[1]}}<span v-if="t[0]==='messages'&&pending" class="pill pend" style="margin-left:auto">{{pending}}</span></a>
+      <a @click="go('home')" style="margin-top:8px">🏠 查看前台</a>
+      <a @click="logout" style="color:#e0576a">🚪 退出登录</a>
+    </aside>
+    <div class="admin-main"><component :is="comp"></component></div>
+  </div>
+</section>` };
+
+/* ---------- ADMIN: overview ---------- */
+const AdOverview={ setup(){
+  const s=state.db, g=computed(()=>latestGrowth()), st=computed(()=>dailyStats());
+  return {s,g,st,adminTab,ageText,daysOld};
+}, template:`
+<div>
+  <div class="admin-head"><h2>📊 概览</h2></div>
+  <div class="stat-row" style="grid-template-columns:repeat(4,1fr)">
+    <div class="card stat"><b>{{ageText(s.baby.birthday)}}</b><span>{{s.baby.name}} · 第{{daysOld(s.baby.birthday)}}天</span></div>
+    <div class="card stat"><b>{{s.milestones.length}}</b><span>里程碑</span></div>
+    <div class="card stat"><b>{{s.albums.reduce((a,b)=>a+b.photos.length,0)}}</b><span>照片</span></div>
+    <div class="card stat"><b>{{st.totalMl}}<small>ml</small></b><span>今日奶量</span></div>
+  </div>
+  <div class="card" style="padding:24px;margin-top:8px">
+    <h4 style="margin-bottom:14px">快捷入口</h4>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn ghost sm" @click="adminTab='daily'">🍼 记录喂奶</button>
+      <button class="btn ghost sm" @click="adminTab='milestones'">✨ 添加里程碑</button>
+      <button class="btn ghost sm" @click="adminTab='diary'">📖 写日记</button>
+      <button class="btn ghost sm" @click="adminTab='growth'">📈 记身高体重</button>
+      <button class="btn ghost sm" @click="adminTab='messages'">💌 审核留言</button>
+      <button class="btn ghost sm" @click="adminTab='settings'">⚙️ 显示设置</button>
+    </div>
+  </div>
+</div>` };
+
+/* ---------- ADMIN: baby ---------- */
+const AdBaby={ setup(){ const b=state.db.baby; return {b,pickFile}; },
+ template:`
+<div>
+  <div class="admin-head"><h2>👶 宝贝信息</h2></div>
+  <div class="card" style="padding:24px;max-width:640px">
+    <div style="display:flex;gap:20px;align-items:center;margin-bottom:18px">
+      <div style="width:90px;height:90px;border-radius:50%;overflow:hidden;box-shadow:var(--shadow-sm);flex:none"><img :src="b.avatar" style="width:100%;height:100%;object-fit:cover"/></div>
+      <button class="btn ghost sm" @click="pickFile(u=>b.avatar=u)">上传头像</button>
+    </div>
+    <div class="row2"><div class="field"><label>姓名 / 昵称</label><input v-model="b.name"/></div>
+      <div class="field"><label>性别</label><select v-model="b.gender"><option value="girl">女宝宝</option><option value="boy">男宝宝</option></select></div></div>
+    <div class="field"><label>生日</label><input type="date" v-model="b.birthday"/></div>
+    <div class="field"><label>宝贝简介</label><textarea v-model="b.bio" rows="3"></textarea></div>
+    <div class="field"><label>家庭简介</label><textarea v-model="b.family" rows="2"></textarea></div>
+    <p style="color:#2f855a">✅ 修改即时保存</p>
+  </div>
+</div>` };
+
+/* ---------- ADMIN: milestones ---------- */
+const AdMilestones={ setup(){
+  const list=computed(()=>state.db.milestones.slice().sort((a,b)=>new Date(b.date)-new Date(a.date)));
+  const editing=ref(null);
+  const blank=()=>({id:'',date:todayStr(),title:'',category:'成长',desc:'',image:''});
+  function open(m){editing.value=m?JSON.parse(JSON.stringify(m)):blank();}
+  function save(){const e=editing.value;if(!e.title){alert('请填写标题');return;}
+    if(e.id){const i=state.db.milestones.findIndex(x=>x.id===e.id);state.db.milestones[i]=e;}
+    else{e.id=uid();state.db.milestones.push(e);}editing.value=null;}
+  async function del(m){if(await confirmDialog('确定删除「'+m.title+'」？'))state.db.milestones=state.db.milestones.filter(x=>x.id!==m.id);}
+  function pickImg(){const t=editing.value;if(!t)return;pickFile(u=>{if(editing.value===t)t.image=u;});}
+  return {list,editing,open,save,del,fmtDate,pickImg};
+}, template:`
+<div>
+  <div class="admin-head"><h2>✨ 里程碑管理</h2><button class="btn" @click="open()">+ 新增里程碑</button></div>
+  <div class="list-row" v-for="m in list" :key="m.id">
+    <div class="thumb" :style="{backgroundImage:'url('+m.image+')'}"></div>
+    <div class="grow"><b>{{m.title}}</b><small>{{fmtDate(m.date)}} · {{m.category}}</small></div>
+    <button class="btn gray sm" @click="open(m)">编辑</button><button class="btn danger sm" @click="del(m)">删除</button>
+  </div>
+  <div class="modal-bg" v-if="editing" @click.self="editing=null"><div class="card modal">
+    <h3>{{editing.id?'编辑':'新增'}}里程碑</h3>
+    <div class="row2"><div class="field"><label>日期</label><input type="date" v-model="editing.date"/></div>
+      <div class="field"><label>分类</label><input v-model="editing.category" placeholder="如 大动作/语言/饮食"/></div></div>
+    <div class="field"><label>标题</label><input v-model="editing.title"/></div>
+    <div class="field"><label>描述</label><textarea v-model="editing.desc" rows="3"></textarea></div>
+    <div class="field"><label>配图</label>
+      <div style="display:flex;gap:10px;align-items:center"><input v-model="editing.image" placeholder="图片URL或上传"/><button class="btn ghost sm" @click="pickImg">上传</button></div>
+      <video v-if="editing.image&&isVideo(editing.image)" :src="editing.image" controls style="margin-top:10px;border-radius:12px;max-height:150px;max-width:100%"></video><img v-else-if="editing.image" :src="editing.image" style="margin-top:10px;border-radius:12px;max-height:150px"/></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end"><button class="btn gray" @click="editing=null">取消</button><button class="btn" @click="save">保存</button></div>
+  </div></div>
+</div>` };
+
+/* ---------- ADMIN: albums ---------- */
+const AdAlbums={ setup(){
+  const albums=computed(()=>state.db.albums);
+  const editing=ref(null); const cur=ref(null);
+  const blank=()=>({id:'',name:'',date:todayStr(),desc:'',cover:'',photos:[]});
+  function open(a){editing.value=a?JSON.parse(JSON.stringify(a)):blank();}
+  function save(){const e=editing.value;if(!e.name){alert('请填写相册名');return;}
+    if(!e.cover&&e.photos[0])e.cover=e.photos[0].url;
+    if(e.id){const i=state.db.albums.findIndex(x=>x.id===e.id);state.db.albums[i]=e;}else{e.id=uid();state.db.albums.push(e);}editing.value=null;}
+  async function del(a){if(await confirmDialog('删除相册「'+a.name+'」？'))state.db.albums=state.db.albums.filter(x=>x.id!==a.id);}
+  function addPhotos(){const t=editing.value;if(!t)return;pickFiles(u=>{if(editing.value!==t)return;if(!Array.isArray(t.photos))t.photos=[];t.photos.push({id:uid(),url:u,caption:'',takenAt:t.date||''});});}
+  function addByUrl(){const t=editing.value;if(!t)return;const u=prompt('输入图片URL');if(!u||editing.value!==t)return;if(!Array.isArray(t.photos))t.photos=[];t.photos.push({id:uid(),url:u,caption:'',takenAt:t.date||''});}
+  function pickCover(){const t=editing.value;if(!t)return;pickFile(u=>{if(editing.value===t)t.cover=u;});}
+  function delPhoto(p){editing.value.photos=editing.value.photos.filter(x=>x.id!==p.id);}
+  const shareA=ref(null); const shareDays=ref(7); const shareUrl=ref(''); const shareExp=ref('');
+  const shareLink=tok=>location.origin+location.pathname+'#share/'+tok;
+  const shareText=e=>e?('有效期至 '+fmtDate(e)):'永久有效';
+  function openShare(a){shareA.value=a;shareDays.value=7;const sh=(state.db.shares||[]).find(x=>x.albumId===a.id);if(sh){shareUrl.value=shareLink(sh.token);shareExp.value=shareText(sh.expiresAt);}else{shareUrl.value='';shareExp.value='';}}
+  function makeShare(){if(!state.db.shares)state.db.shares=[];state.db.shares=state.db.shares.filter(x=>x.albumId!==shareA.value.id);const tok=Math.random().toString(36).slice(2,12);const exp=shareDays.value?new Date(Date.now()+shareDays.value*86400000).toISOString():null;state.db.shares.push({id:uid(),token:tok,albumId:shareA.value.id,expiresAt:exp});shareUrl.value=shareLink(tok);shareExp.value=shareText(exp);}
+  function revokeShare(){state.db.shares=(state.db.shares||[]).filter(x=>x.albumId!==shareA.value.id);shareUrl.value='';shareExp.value='';}
+  function copyShare(){if(navigator.clipboard)navigator.clipboard.writeText(shareUrl.value);alert('已复制链接');}
+  return {albums,editing,open,save,del,addPhotos,addByUrl,delPhoto,fmtDate,pickCover,shareA,shareDays,shareUrl,shareExp,openShare,makeShare,revokeShare,copyShare};
+}, template:`
+<div>
+  <div class="admin-head"><h2>📷 相册管理</h2><button class="btn" @click="open()">+ 新建相册</button></div>
+  <div class="list-row" v-for="a in albums" :key="a.id">
+    <div class="thumb" :style="{backgroundImage:'url('+a.cover+')'}"></div>
+    <div class="grow"><b>{{a.name}}</b><small>{{fmtDate(a.date)}} · {{a.photos.length}} 张照片</small></div>
+    <button class="btn ghost sm" @click="openShare(a)">🔗 分享</button><button class="btn gray sm" @click="open(a)">编辑</button><button class="btn danger sm" @click="del(a)">删除</button>
+  </div>
+  <div class="modal-bg" v-if="shareA" @click.self="shareA=null"><div class="card modal">
+    <h3>🔗 分享「{{shareA.name}}」</h3>
+    <p style="color:var(--c-muted)">生成一个免登录的对外链接，家人无需注册即可查看这一本相册。</p>
+    <div class="field"><label>有效期</label><div class="yr-filter" style="margin:0"><button :class="{on:shareDays===7}" @click="shareDays=7">7 天</button><button :class="{on:shareDays===30}" @click="shareDays=30">30 天</button><button :class="{on:shareDays===0}" @click="shareDays=0">永久</button></div></div>
+    <button class="btn" @click="makeShare">生成 / 更新链接</button>
+    <div v-if="shareUrl" style="margin-top:14px">
+      <div class="field" style="margin:0"><label>分享链接</label><div style="display:flex;gap:8px"><input :value="shareUrl" readonly style="font-size:.82rem"/><button class="btn ghost sm" @click="copyShare">复制</button></div></div>
+      <p style="color:var(--c-muted);font-size:.82rem;margin-top:6px">{{shareExp}}</p>
+      <button class="btn danger sm" @click="revokeShare">撤销分享</button>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:14px"><button class="btn gray" @click="shareA=null">关闭</button></div>
+  </div></div>
+  <div class="modal-bg" v-if="editing" @click.self="editing=null"><div class="card modal">
+    <h3>{{editing.id?'编辑':'新建'}}相册</h3>
+    <div class="row2"><div class="field"><label>相册名</label><input v-model="editing.name"/></div>
+      <div class="field"><label>日期</label><input type="date" v-model="editing.date"/></div></div>
+    <div class="field"><label>描述</label><input v-model="editing.desc"/></div>
+    <div class="field"><label>封面</label><div style="display:flex;gap:10px;align-items:center"><input v-model="editing.cover" placeholder="留空则用第一张照片"/><button class="btn ghost sm" @click="pickCover">上传</button></div></div>
+    <div class="field"><label>照片（{{editing.photos.length}}）</label>
+      <div style="display:flex;gap:8px;margin-bottom:10px"><button class="btn ghost sm" @click="addPhotos">📁 批量上传</button><button class="btn ghost sm" @click="addByUrl">🔗 用URL添加</button></div>
+      <div class="grid" style="grid-template-columns:repeat(4,1fr);gap:8px">
+        <div v-for="p in editing.photos" :key="p.id" style="position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:#f3e7e2">
+          <MediaThumb :url="p.url"/><button @click="delPhoto(p)" style="position:absolute;top:2px;right:2px;z-index:2;background:rgba(0,0,0,.6);color:#fff;width:22px;height:22px;border-radius:50%">✕</button></div>
+      </div></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end"><button class="btn gray" @click="editing=null">取消</button><button class="btn" @click="save">保存</button></div>
+  </div></div>
+</div>` };
+/* ---------- toggle ---------- */
+const Toggle={props:['modelValue'],emits:['update:modelValue'],template:`<div class="sw" :class="{on:modelValue}" @click="$emit('update:modelValue',!modelValue)"><i></i></div>`};
+
+/* ---------- ADMIN: growth ---------- */
+const AdGrowth={ setup(){
+  const rows=computed(()=>sortedGrowth().reverse());
+  const f=reactive({date:todayStr(),height:'',weight:'',head:''});
+  function add(){if(!f.height&&!f.weight){alert('请填写身高或体重');return;}
+    state.db.growth.push({id:uid(),date:f.date,height:+f.height||null,weight:+f.weight||null,head:+f.head||null});
+    f.height=f.weight=f.head='';}
+  async function del(x){if(await confirmDialog('删除该条记录？'))state.db.growth=state.db.growth.filter(r=>r.id!==x.id);}
+  return {rows,f,add,del,fmtDate};
+}, template:`
+<div>
+  <div class="admin-head"><h2>📈 身高体重管理</h2></div>
+  <div class="card" style="padding:18px;margin-bottom:18px">
+    <div class="row2" style="grid-template-columns:repeat(4,1fr) auto;align-items:end;gap:12px">
+      <div class="field" style="margin:0"><label>日期</label><input type="date" v-model="f.date"/></div>
+      <div class="field" style="margin:0"><label>身高 cm</label><input type="number" v-model="f.height"/></div>
+      <div class="field" style="margin:0"><label>体重 kg</label><input type="number" step="0.1" v-model="f.weight"/></div>
+      <div class="field" style="margin:0"><label>头围 cm</label><input type="number" step="0.1" v-model="f.head"/></div>
+      <button class="btn" @click="add">+ 添加</button>
+    </div>
+  </div>
+  <div class="card" style="padding:8px 4px;overflow:auto"><table class="tbl"><thead><tr><th>日期</th><th>身高</th><th>体重</th><th>头围</th><th></th></tr></thead>
+    <tbody><tr v-for="x in rows" :key="x.id"><td>{{fmtDate(x.date)}}</td><td>{{x.height||'—'}}</td><td>{{x.weight||'—'}}</td><td>{{x.head||'—'}}</td>
+    <td><button class="btn danger sm" @click="del(x)">删除</button></td></tr></tbody></table></div>
+</div>` };
+
+/* ---------- ADMIN: daily ---------- */
+const AdDaily={ setup(){
+  const logs=computed(()=>state.db.daily.slice().sort((a,b)=>new Date(b.time)-new Date(a.time)));
+  const st=computed(()=>dailyStats());
+  const amt=ref(state.db.settings.feeding.defaultAmount), ftype=ref('formula');
+  const feedTime=t=>{const d=new Date(t);return `${d.getMonth()+1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;};
+  function feed(){addFeeding(amt.value,ftype.value);}
+  function diaper(t){addDiaper(t);}
+  async function del(x){state.db.daily=state.db.daily.filter(r=>r.id!==x.id);}
+  return {logs,st,amt,ftype,feed,diaper,del,feedTime};
+}, template:`
+<div>
+  <div class="admin-head"><h2>🍼 日常记录管理</h2></div>
+  <div class="card" style="padding:20px;margin-bottom:16px">
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+      <label style="font-weight:600">喂奶</label>
+      <input type="number" v-model="amt" style="width:90px;padding:9px;border:1.5px solid var(--c-line);border-radius:10px"/> ml
+      <select v-model="ftype" style="padding:9px;border:1.5px solid var(--c-line);border-radius:10px"><option value="formula">配方奶</option><option value="breast">母乳</option></select>
+      <button class="btn sm" @click="feed">🍼 记一次喂奶</button>
+      <span style="width:1px;height:26px;background:var(--c-line)"></span>
+      <button class="btn ghost sm" @click="diaper('pee')">💧 小便</button>
+      <button class="btn ghost sm" @click="diaper('poop')">💩 大便</button>
+    </div>
+    <p style="color:var(--c-muted);margin-top:12px;font-size:.9rem">今日：喂奶 {{st.feeds.length}} 次 / {{st.totalMl}}ml · 小便 {{st.pee}} · 大便 {{st.poop}}</p>
+  </div>
+  <div class="log" v-for="l in logs" :key="l.id">
+    <div class="ic" :class="l.type==='feeding'?'feed':(l.diaperType==='poop'?'poop':'pee')">{{l.type==='feeding'?'🍼':(l.diaperType==='poop'?'💩':'💧')}}</div>
+    <div class="grow"><b>{{l.type==='feeding'?('喂奶 '+(l.amount||'')+'ml'):('换尿布 · '+(l.diaperType==='poop'?'大便':'小便'))}}</b><small>{{feedTime(l.time)}}{{l.note?(' · '+l.note):''}}</small></div>
+    <button class="btn danger sm" @click="del(l)">删除</button>
+  </div>
+</div>` };
+
+/* ---------- ADMIN: diary ---------- */
+const AdDiary={ setup(){
+  const list=computed(()=>state.db.diary.slice().sort((a,b)=>new Date(b.date)-new Date(a.date)));
+  const editing=ref(null);
+  const blank=()=>({id:'',date:todayStr(),title:'',content:'',images:[]});
+  function open(d){editing.value=d?JSON.parse(JSON.stringify(d)):blank();}
+  function save(){const e=editing.value;if(!e.title){alert('请填写标题');return;}
+    if(e.id){const i=state.db.diary.findIndex(x=>x.id===e.id);state.db.diary[i]=e;}else{e.id=uid();state.db.diary.push(e);}editing.value=null;}
+  async function del(d){if(await confirmDialog('删除日记「'+d.title+'」？'))state.db.diary=state.db.diary.filter(x=>x.id!==d.id);}
+  function addImgs(){const t=editing.value;if(!t)return;pickFiles(u=>{if(editing.value!==t)return;if(!Array.isArray(t.images))t.images=[];t.images.push(u);});}
+  function addUrl(){const t=editing.value;if(!t)return;const u=prompt('图片URL');if(!u||editing.value!==t)return;if(!Array.isArray(t.images))t.images=[];t.images.push(u);}
+  return {list,editing,open,save,del,addImgs,addUrl,fmtDate};
+}, template:`
+<div>
+  <div class="admin-head"><h2>📖 日记管理</h2><button class="btn" @click="open()">+ 写日记</button></div>
+  <div class="list-row" v-for="d in list" :key="d.id">
+    <div class="thumb" :style="{backgroundImage:'url('+(d.images&&d.images[0]||'')+')'}"></div>
+    <div class="grow"><b>{{d.title}}</b><small>{{fmtDate(d.date)}} · {{d.content.slice(0,30)}}…</small></div>
+    <button class="btn gray sm" @click="open(d)">编辑</button><button class="btn danger sm" @click="del(d)">删除</button>
+  </div>
+  <div class="modal-bg" v-if="editing" @click.self="editing=null"><div class="card modal">
+    <h3>{{editing.id?'编辑':'新写'}}日记</h3>
+    <div class="row2"><div class="field"><label>日期</label><input type="date" v-model="editing.date"/></div>
+      <div class="field"><label>标题</label><input v-model="editing.title"/></div></div>
+    <div class="field"><label>正文</label><textarea v-model="editing.content" rows="6"></textarea></div>
+    <div class="field"><label>配图（{{editing.images.length}}）</label>
+      <div style="display:flex;gap:8px;margin-bottom:8px"><button class="btn ghost sm" @click="addImgs">📁 上传</button><button class="btn ghost sm" @click="addUrl">🔗 URL</button></div>
+      <div class="grid" style="grid-template-columns:repeat(4,1fr);gap:8px"><div v-for="(im,i) in editing.images" :key="i" style="position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:#f3e7e2"><MediaThumb :url="im"/><button @click="editing.images.splice(i,1)" style="position:absolute;top:2px;right:2px;z-index:2;background:rgba(0,0,0,.6);color:#fff;width:22px;height:22px;border-radius:50%">✕</button></div></div></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end"><button class="btn gray" @click="editing=null">取消</button><button class="btn" @click="save">保存</button></div>
+  </div></div>
+</div>` };
+
+/* ---------- ADMIN: messages ---------- */
+const AdMessages={ setup(){
+  const pending=computed(()=>state.db.messages.filter(m=>m.status==='pending'));
+  const approved=computed(()=>state.db.messages.filter(m=>m.status==='approved'));
+  function approve(m){m.status='approved';}
+  async function del(m){if(await confirmDialog('删除该留言？'))state.db.messages=state.db.messages.filter(x=>x.id!==m.id);}
+  return {pending,approved,approve,del,fmtMD};
+}, template:`
+<div>
+  <div class="admin-head"><h2>💌 留言审核</h2></div>
+  <h4 style="margin-bottom:10px">待审核 <span class="pill pend">{{pending.length}}</span></h4>
+  <p v-if="!pending.length" style="color:var(--c-muted);margin-bottom:20px">暂无待审核留言</p>
+  <div class="list-row" v-for="m in pending" :key="m.id">
+    <span class="av" :style="{background:m.color,width:'42px',height:'42px',borderRadius:'50%',display:'grid',placeItems:'center',color:'#fff',fontWeight:700}">{{m.name.slice(0,1)}}</span>
+    <div class="grow"><b>{{m.name}}</b><small>{{m.content}}</small></div>
+    <button class="btn sm" @click="approve(m)">✓ 通过</button><button class="btn danger sm" @click="del(m)">删除</button>
+  </div>
+  <h4 style="margin:24px 0 10px">已通过 <span class="pill ok">{{approved.length}}</span></h4>
+  <div class="list-row" v-for="m in approved" :key="m.id">
+    <span class="av" :style="{background:m.color,width:'42px',height:'42px',borderRadius:'50%',display:'grid',placeItems:'center',color:'#fff',fontWeight:700}">{{m.name.slice(0,1)}}</span>
+    <div class="grow"><b>{{m.name}}</b><small>{{m.content}}</small></div>
+    <button class="btn danger sm" @click="del(m)">删除</button>
+  </div>
+</div>` };
+
+/* ---------- ADMIN: settings ---------- */
+const THEMES=[{name:'甜心粉',primary:'#ec8aa0',primaryD:'#d75f7e',secondary:'#7fc6d0',accent:'#ffc178',bg:'#fff6f3'},
+{name:'天空蓝',primary:'#5aa8dd',primaryD:'#2f7fb8',secondary:'#8fd0c4',accent:'#ffcf87',bg:'#f1f8ff'},
+{name:'薄荷绿',primary:'#5ebd8a',primaryD:'#2f9d68',secondary:'#86c6d6',accent:'#ffc178',bg:'#f2fbf6'},
+{name:'奶油黄',primary:'#eaad4a',primaryD:'#c6862a',secondary:'#7fc6c0',accent:'#ef8fa4',bg:'#fffdf3'},
+{name:'薰衣紫',primary:'#9a83d6',primaryD:'#6f52b8',secondary:'#9ec7de',accent:'#f3a0be',bg:'#f7f4ff'}];
+const MODNAMES={timeline:'成长时间线',gallery:'照片画廊',growth:'成长曲线',vaccine:'疫苗接种',daily:'日常记录',diary:'成长日记',messages:'留言墙',videos:'成长视频',about:'关于'};
+const HOMENAMES={hero:'Hero 首屏',countdown:'纪念日倒计时',onthisday:'那年今天',carousel:'照片轮播',milestones:'最近里程碑',growth:'成长概览',videos:'最新视频',diary:'日记入口',recap:'成长小结',vaccine:'疫苗提醒'};
+const AdSettings={ components:{Toggle}, setup(){
+  const s=state.db.settings;
+  const emojiStr=ref(s.deco.emoji.join(' '));
+  function applyPreset(t){Object.assign(s.theme,t);applyTheme();}
+  function onColor(){applyTheme();}
+  function onDeco(){s.deco.emoji=emojiStr.value.split(/[\s,，]+/).filter(Boolean);applyTheme();}
+  const photoCount=computed(()=>{let n=0;state.db.albums.forEach(a=>n+=a.photos.length);return n+state.db.diary.reduce((x,d)=>x+(d.images?.length||0),0)+state.db.milestones.filter(m=>m.image).length;});
+  async function reset(){if(await confirmDialog('确定恢复演示初始数据？当前修改将丢失。')){resetDemo();adminTab.value='overview';go('home');}}
+  function exportData(){const keys=['baby','settings','milestones','albums','growth','daily','diary','videos','messages','recaps','vaccines'];const out={version:1,exportedAt:new Date().toISOString()};keys.forEach(k=>out[k]=state.db[k]);const blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='baby-growth-backup-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(a.href);}
+  function importData(){const i=document.createElement('input');i.type='file';i.accept='application/json,.json';i.onchange=async e=>{const f=e.target.files[0];if(!f)return;if(!await confirmDialog('导入将覆盖当前所有数据（宝贝/里程碑/相册/成长/日常/日记/视频/留言/小结/疫苗/设置），确定继续？'))return;try{const data=JSON.parse(await f.text());['baby','settings','milestones','albums','growth','daily','diary','videos','messages','recaps','vaccines'].forEach(k=>{if(data[k]!==undefined)state.db[k]=data[k];});applyTheme();alert('导入成功 ✅');}catch(err){alert('导入失败：'+err.message);}};i.click();}
+  function pickIcon(){pickFile(u=>{s.faviconUrl=u;applyTheme();});}
+  function resetIcon(){s.faviconUrl='';applyTheme();}
+  return {s,THEMES,MODNAMES,HOMENAMES,applyPreset,onColor,onDeco,emojiStr,photoCount,reset,exportData,importData,pickIcon,resetIcon,DEFAULT_FAVICON};
+}, template:`
+<div>
+  <div class="admin-head"><h2>⚙️ 显示设置</h2></div>
+  <div class="card" style="padding:22px;margin-bottom:16px">
+    <h4 style="margin-bottom:12px">🎨 主题配色</h4>
+    <div class="swatch" style="margin-bottom:16px"><button v-for="t in THEMES" :key="t.name" :title="t.name" :class="{on:s.theme.name===t.name}" :style="{background:'linear-gradient(135deg,'+t.primary+','+t.accent+')'}" @click="applyPreset(t)"></button></div>
+    <div class="row2"><div class="field"><label>主色</label><input type="color" v-model="s.theme.primary" @input="onColor"/></div>
+      <div class="field"><label>主色(深)</label><input type="color" v-model="s.theme.primaryD" @input="onColor"/></div>
+      <div class="field"><label>辅色</label><input type="color" v-model="s.theme.secondary" @input="onColor"/></div>
+      <div class="field"><label>点缀色</label><input type="color" v-model="s.theme.accent" @input="onColor"/></div>
+      <div class="field"><label>背景色</label><input type="color" v-model="s.theme.bg" @input="onColor"/></div></div>
+  </div>
+  <div class="card" style="padding:22px;margin-bottom:16px">
+    <h4 style="margin-bottom:6px">✨ 背景装饰</h4>
+    <div class="toggle-row"><span>启用漂浮装饰</span><Toggle v-model="s.deco.enabled" @update:modelValue="onDeco"/></div>
+    <div class="field" style="margin-top:14px"><label>透明度 {{Math.round(s.deco.opacity*100)}}%</label><input type="range" min="0" max="1" step="0.05" v-model.number="s.deco.opacity" @input="onDeco"/></div>
+    <div class="field"><label>装饰图案（空格分隔的 Emoji）</label><input v-model="emojiStr" @change="onDeco"/></div>
+  </div>
+  <div class="card" style="padding:22px;margin-bottom:16px">
+    <h4 style="margin-bottom:6px">🌟 网站图标（favicon）</h4>
+    <p style="color:var(--c-muted);font-size:.86rem;margin-bottom:14px">浏览器标签栏、书签栏、主屏快捷方式上显示的小图标。建议正方形 PNG/SVG，尺寸 64×64 到 512×512 之间。留空则用默认 🍼。</p>
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <img :src="s.faviconUrl||DEFAULT_FAVICON" alt="favicon 预览" style="width:64px;height:64px;border-radius:12px;border:1px solid var(--c-line);object-fit:contain;background:#fff;padding:6px"/>
+      <button class="btn ghost sm" @click="pickIcon">上传自定义图标</button>
+      <button class="btn ghost sm" @click="resetIcon">恢复默认 🍼</button>
+    </div>
+  </div>
+  <div class="card" style="padding:22px;margin-bottom:16px">
+    <h4 style="margin-bottom:6px">🖼️ 照片相框风格</h4>
+    <p style="color:var(--c-muted);font-size:.86rem;margin-bottom:14px">选好即刻生效并自动保存。全站所有图片（首页大图/相册/时间线/日记/里程碑/视频）都用这个风格。</p>
+    <div class="frame-picker">
+      <button v-for="f in FRAMES" :key="f[0]" :class="{on:(s.photoFrame||'polaroid')===f[0]}" @click="setFrame(f[0])">
+        <span class="preview" :class="'preview-'+f[0]"></span>
+        <span class="lbl">{{f[2]}} {{f[1]}}</span>
+      </button>
+    </div>
+  </div>
+  <div class="row2" style="align-items:start">
+    <div class="card" style="padding:22px"><h4 style="margin-bottom:6px">🧩 功能模块开关</h4>
+      <div class="toggle-row" v-for="(nm,k) in MODNAMES" :key="k"><span>{{nm}}</span><Toggle v-model="s.modules[k]"/></div></div>
+    <div class="card" style="padding:22px"><h4 style="margin-bottom:6px">🏠 首页区块开关</h4>
+      <div class="toggle-row" v-for="(nm,k) in HOMENAMES" :key="k"><span>{{nm}}</span><Toggle v-model="s.home[k]"/></div></div>
+  </div>
+  <div class="card" style="padding:22px;margin-top:16px"><h4 style="margin-bottom:12px">🍼 喂奶默认参数</h4>
+    <div class="row2"><div class="field"><label>默认单次奶量 (ml)</label><input type="number" v-model.number="s.feeding.defaultAmount"/></div>
+      <div class="field"><label>预计每日奶量 (ml)</label><input type="number" v-model.number="s.feeding.dailyTarget"/></div></div></div>
+  <div class="card" style="padding:22px;margin-top:16px"><h4 style="margin-bottom:6px">🤖 AI 助手（可选大模型）</h4>
+    <p style="color:var(--c-muted);font-size:.86rem;margin-bottom:12px">不填则使用内置指令助手（离线免费）。填入 OpenAI 兼容接口后升级为自然语言对话。密钥仅存于本设备。</p>
+    <div class="toggle-row"><span>启用大模型自然语言对话</span><Toggle v-model="s.ai.enabled"/></div>
+    <div class="field" style="margin-top:12px"><label>API Key</label><input v-model="s.ai.apiKey" type="password" placeholder="sk-..."/></div>
+    <div class="row2"><div class="field"><label>Base URL</label><input v-model="s.ai.baseUrl"/></div>
+      <div class="field"><label>模型</label><input v-model="s.ai.model"/></div></div></div>
+  <div class="card" style="padding:22px;margin-top:16px"><h4 style="margin-bottom:6px">🔐 管理员账号</h4>
+    <div class="row2"><div class="field"><label>账号</label><input v-model="s.admin.username"/></div>
+      <div class="field"><label>密码</label><input v-model="s.admin.password"/></div></div></div>
+  <div class="card" style="padding:22px;margin-top:16px"><h4 style="margin-bottom:6px">🗂️ 文件与数据</h4>
+    <p style="color:var(--c-muted);font-size:.9rem;margin-bottom:12px">当前约 {{photoCount}} 张图片引用 · 数据存于本设备浏览器（在线预览为临时内存存储，刷新后重置；下载版/自托管正常持久化）</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+      <button class="btn ghost sm" @click="exportData">⬇️ 导出数据(JSON)</button>
+      <button class="btn ghost sm" @click="importData">⬆️ 导入恢复</button>
+    </div>
+    <p style="color:var(--c-muted);font-size:.78rem;margin:0 0 12px">导出为数据 JSON（不含照片/视频文件；完整备份请另存 uploads 目录）。导入会覆盖当前数据。</p>
+    <button class="btn danger sm" @click="reset">恢复演示初始数据</button></div>
+</div>` };
+const AdVideos={ setup(){
+  const list=computed(()=>state.db.videos);
+  const editing=ref(null);
+  const blank=()=>({id:'',date:todayStr(),title:'',desc:'',url:'',cover:''});
+  function open(v){editing.value=v?JSON.parse(JSON.stringify(v)):blank();}
+  function save(){const e=editing.value;if(!e.title||!e.url){alert('请填写标题并上传视频');return;}
+    if(e.id){const i=state.db.videos.findIndex(x=>x.id===e.id);state.db.videos[i]=e;}else{e.id=uid();state.db.videos.push(e);}editing.value=null;}
+  async function del(v){if(await confirmDialog('删除视频「'+v.title+'」？'))state.db.videos=state.db.videos.filter(x=>x.id!==v.id);}
+  function pickVideo(){const t=editing.value;if(!t)return;pickFile(u=>{if(editing.value===t)t.url=u;});}
+  function pickVideoCover(){const t=editing.value;if(!t)return;pickFile(u=>{if(editing.value===t)t.cover=u;});}
+  return {list,editing,open,save,del,fmtDate,pickVideo,pickVideoCover};
+}, template:`
+<div>
+  <div class="admin-head"><h2>\ud83c\udfac 成长视频管理</h2><button class="btn" @click="open()">+ 新增视频</button></div>
+  <div class="list-row" v-for="v in list" :key="v.id">
+    <div class="thumb"><MediaThumb :url="v.cover||v.url"/></div>
+    <div class="grow"><b>{{v.title}}</b><small>{{fmtDate(v.date)}}</small></div>
+    <button class="btn gray sm" @click="open(v)">编辑</button><button class="btn danger sm" @click="del(v)">删除</button>
+  </div>
+  <p v-if="!list.length" style="color:var(--c-muted)">还没有视频，点右上角新增。</p>
+  <div class="modal-bg" v-if="editing" @click.self="editing=null"><div class="card modal">
+    <h3>{{editing.id?'编辑':'新增'}}视频</h3>
+    <div class="row2"><div class="field"><label>标题</label><input v-model="editing.title"/></div>
+      <div class="field"><label>日期</label><input type="date" v-model="editing.date"/></div></div>
+    <div class="field"><label>简介</label><textarea v-model="editing.desc" rows="2"></textarea></div>
+    <div class="field"><label>视频文件</label><div style="display:flex;gap:10px;align-items:center"><input v-model="editing.url" placeholder="视频URL或上传"/><button class="btn ghost sm" @click="pickVideo()">上传视频</button></div>
+      <video v-if="editing.url" :src="editing.url" controls style="margin-top:10px;border-radius:12px;max-height:180px;max-width:100%"></video></div>
+    <div class="field"><label>封面图（可选，留空用视频首帧）</label><div style="display:flex;gap:10px;align-items:center"><input v-model="editing.cover" placeholder="封面URL或上传"/><button class="btn ghost sm" @click="pickVideoCover">上传封面</button></div></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end"><button class="btn gray" @click="editing=null">取消</button><button class="btn" @click="save">保存</button></div>
+  </div></div>
+</div>` };
+
+const AdMembers={ setup(){
+  const list=computed(()=>state.db.users||[]);
+  function toggle(u){u.disabled=!u.disabled;}
+  async function del(u){if(await confirmDialog('删除成员「'+u.username+'」？'))state.db.users=state.db.users.filter(x=>x.id!==u.id);}
+  return {list,toggle,del,fmtDate};
+}, template:`
+<div>
+  <div class="admin-head"><h2>👥 成员管理</h2></div>
+  <p style="color:var(--c-muted);margin-bottom:14px">管理员账号受保护，不能在此禁用或删除。</p>
+  <div class="list-row" v-for="u in list" :key="u.id">
+    <span :style="{background:u.role==='admin'?'#ef8fa4':'#7fc8d4',width:'40px',height:'40px',borderRadius:'50%',display:'grid',placeItems:'center',color:'#fff',fontWeight:700,flex:'none'}">{{(u.username||'?').slice(0,1).toUpperCase()}}</span>
+    <div class="grow"><b>{{u.username}}</b><small>{{u.role==='admin'?'管理员':'家庭成员'}}<template v-if="u.createdAt"> · 注册于 {{fmtDate(u.createdAt)}}</template></small></div>
+    <span class="pill" :class="u.disabled?'pend':'ok'">{{u.role==='admin'?'管理员':(u.disabled?'已禁用':'正常')}}</span>
+    <button v-if="u.role!=='admin'" class="btn gray sm" @click="toggle(u)">{{u.disabled?'启用':'禁用'}}</button>
+    <button v-if="u.role!=='admin'" class="btn danger sm" @click="del(u)">删除</button>
+  </div>
+  <p v-if="!list.length" style="color:var(--c-muted)">还没有成员。</p>
+</div>` };
+
+function buildRecapLocal(period){
+  const days=period==='month'?30:7; const end=Date.now(); const start=end-days*86400000;
+  const name=state.db.baby.name; const label=period==='month'?'这一个月':'这一周';
+  const inr=d=>{const t=new Date(d).getTime();return !isNaN(t)&&t>=start&&t<=end;};
+  const ms=(state.db.milestones||[]).filter(m=>inr(m.date)).map(m=>m.title);
+  const diary=(state.db.diary||[]).filter(x=>inr(x.date));
+  const videos=(state.db.videos||[]).filter(v=>inr(v.date));
+  let photos=0;(state.db.albums||[]).forEach(a=>(a.photos||[]).forEach(p=>{if(inr(p.takenAt))photos++;}));
+  const feeds=(state.db.daily||[]).filter(d=>d.type==='feeding'&&inr(d.time));
+  const totalMl=feeds.reduce((s,d)=>s+(+d.amount||0),0);
+  const g=(state.db.growth||[]).filter(r=>inr(r.date)).sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const parts=[label+'，'+name+'又悄悄长大了一点。'];
+  if(ms.length)parts.push('新解锁的里程碑：'+ms.join('、')+'。');
+  const cs=[];if(diary.length)cs.push(diary.length+' 篇日记');if(photos)cs.push(photos+' 张照片');if(videos.length)cs.push(videos.length+' 段视频');
+  if(cs.length)parts.push('我们一起记录了 '+cs.join('、')+'。');
+  if(g.length)parts.push('最新身高 '+g[g.length-1].height+'cm、体重 '+g[g.length-1].weight+'kg。');
+  if(feeds.length)parts.push('平均每天喝奶约 '+Math.round(totalMl/days)+'ml。');
+  if(parts.length===1)parts.push('虽然没有留下太多新记录，但每一天的陪伴都很珍贵。');
+  parts.push('期待下一段旅程里，'+name+'带来更多小惊喜 💕');
+  return parts.join('');
+}
+const AdRecaps={ setup(){
+  const list=computed(()=>state.db.recaps||[]);
+  const busy=ref(false);
+  const aihint=computed(()=>'演示为内置模板生成；全栈版填入大模型 Key 可获得更自然的文字。');
+  function gen(p){const c=buildRecapLocal(p);state.db.recaps.unshift({id:uid(),period:p,title:p==='month'?'本月成长小结':'本周成长小结',content:c,createdAt:new Date().toISOString()});}
+  async function del(r){if(await confirmDialog('删除这份小结？'))state.db.recaps=state.db.recaps.filter(x=>x.id!==r.id);}
+  return {list,busy,aihint,gen,del,fmtDate};
+}, template:`
+<div>
+  <div class="admin-head"><h2>📝 AI 成长小结</h2><div style="display:flex;gap:8px"><button class="btn" :disabled="busy" @click="gen('week')">生成本周</button><button class="btn ghost" :disabled="busy" @click="gen('month')">生成本月</button></div></div>
+  <p style="color:var(--c-muted);margin-bottom:14px">{{aihint}}</p>
+  <div class="card" v-for="r in list" :key="r.id" style="padding:20px;margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><b>{{r.title}}</b><span class="pill ok">{{r.period==='month'?'月':'周'}}</span><span style="margin-left:auto;color:var(--c-muted);font-size:.8rem">{{fmtDate(r.createdAt)}}</span><button class="btn danger sm" @click="del(r)">删除</button></div>
+    <p style="color:#5b5870;white-space:pre-wrap;line-height:1.85">{{r.content}}</p>
+  </div>
+  <p v-if="!list.length" style="color:var(--c-muted)">还没有小结，点右上角生成一份。</p>
+</div>` };
+
+const AdVaccines={ setup(){
+  const list=computed(()=>(state.db.vaccines||[]).slice().sort((a,b)=>(a.plannedMonth-b.plannedMonth)||(''+a.name).localeCompare(b.name)));
+  const done=computed(()=>list.value.filter(v=>v.date).length);
+  const editing=ref(null);
+  const blank=()=>({id:'',name:'',dose:1,plannedMonth:0,date:'',note:''});
+  function open(v){editing.value=v?JSON.parse(JSON.stringify(v)):blank();}
+  function save(){const e=editing.value;if(!e.name){alert('请填写名称');return;}if(e.id){const i=state.db.vaccines.findIndex(x=>x.id===e.id);state.db.vaccines[i]=e;}else{e.id=uid();state.db.vaccines.push(e);}editing.value=null;}
+  async function del(v){if(await confirmDialog('删除「'+v.name+' 第'+v.dose+'剂」？'))state.db.vaccines=state.db.vaccines.filter(x=>x.id!==v.id);}
+  function toggle(v){v.date=v.date?'':todayStr();}
+  function loadStd(){if(!state.db.vaccines)state.db.vaccines=[];if(state.db.vaccines.length)return;VXSTD.forEach(a=>state.db.vaccines.push({id:uid(),name:a[0],dose:a[1],plannedMonth:a[2],date:''}));}
+  return {list,done,editing,open,save,del,toggle,loadStd,fmtDate};
+}, template:`
+<div>
+  <div class="admin-head"><h2>💉 疫苗管理</h2><div style="display:flex;gap:8px"><button class="btn ghost" @click="loadStd" v-if="!list.length">载入标准程序</button><button class="btn" @click="open()">+ 新增</button></div></div>
+  <p style="color:var(--c-muted);margin-bottom:12px">已完成 {{done}}/{{list.length}}。点右侧状态可切换是否已接种。</p>
+  <div class="list-row" v-for="v in list" :key="v.id">
+    <div style="width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-size:1.2rem;background:#e5f4f7;flex:none">💉</div>
+    <div class="grow"><b>{{v.name}} · 第{{v.dose}}剂</b><small>建议 {{vxMonLabel(v.plannedMonth)}}<template v-if="v.date"> · 已接种 {{fmtDate(v.date)}}</template></small></div>
+    <span class="pill" :class="vxInfo(v).cls" style="cursor:pointer" @click="toggle(v)">{{vxInfo(v).label}}</span>
+    <button class="btn gray sm" @click="open(v)">编辑</button><button class="btn danger sm" @click="del(v)">删除</button>
+  </div>
+  <p v-if="!list.length" style="color:var(--c-muted)">还没有疫苗计划，点「载入标准程序」快速开始。</p>
+  <div class="modal-bg" v-if="editing" @click.self="editing=null"><div class="card modal">
+    <h3>{{editing.id?'编辑':'新增'}}疫苗</h3>
+    <div class="row2"><div class="field"><label>名称</label><input v-model="editing.name"/></div><div class="field"><label>剂次</label><input type="number" v-model.number="editing.dose"/></div></div>
+    <div class="row2"><div class="field"><label>建议月龄</label><input type="number" v-model.number="editing.plannedMonth"/></div><div class="field"><label>接种日期（空=未接种）</label><input type="date" v-model="editing.date"/></div></div>
+    <div class="field"><label>备注</label><input v-model="editing.note"/></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end"><button class="btn gray" @click="editing=null">取消</button><button class="btn" @click="save">保存</button></div>
+  </div></div>
+</div>` };
+
+/* ---------- AI WIDGET ---------- */
+const AiWidget={ setup(){
+  const open=ref(false), input=ref(''), busy=ref(false), listening=ref(false);
+  const msgs=reactive([{role:'assistant',content:`你好呀！我是${state.db.baby.name}的成长小助手 🍼\n问我"宝宝多大了""最新身高体重""距上次喂奶多久"都可以，登录后还能帮你语音记录喂奶～`}]);
+  const bodyEl=ref(null);
+  const mode=computed(()=>state.db.settings.ai.enabled&&state.db.settings.ai.apiKey?'AI 大模型':'内置助手');
+  const quicks=['宝宝多大了？','最新身高体重','距上次喂奶多久','今天喝了多少奶','最近的里程碑'];
+  function scrollB(){nextTick(()=>{if(bodyEl.value)bodyEl.value.scrollTop=bodyEl.value.scrollHeight;});}
+  function speak(t){if('speechSynthesis'in window){const u=new SpeechSynthesisUtterance(t.replace(/[·•\n]/g,'，'));u.lang='zh-CN';u.rate=1.05;speechSynthesis.cancel();speechSynthesis.speak(u);}}
+  async function send(txt,spoken=false){const q=(txt??input.value).trim();if(!q||busy.value)return;
+    msgs.push({role:'user',content:q});input.value='';busy.value=true;scrollB();
+    let reply;
+    try{
+      if(state.db.settings.ai.enabled&&state.db.settings.ai.apiKey){reply=await llmAnswer(msgs.filter(m=>m.role!=='system'));}
+      else{reply=localAnswer(q).reply;}
+    }catch(e){reply=localAnswer(q).reply+`\n\n（大模型调用失败：${e.message}，已用内置助手回答）`;}
+    msgs.push({role:'assistant',content:reply});busy.value=false;scrollB();if(spoken)speak(reply);
+  }
+  let rec;
+  function voice(){
+    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(!SR){alert('当前浏览器不支持语音识别，建议用 Chrome / Edge');return;}
+    if(listening.value){rec&&rec.stop();return;}
+    rec=new SR();rec.lang='zh-CN';rec.interimResults=false;
+    rec.onstart=()=>listening.value=true;rec.onend=()=>listening.value=false;
+    rec.onerror=()=>listening.value=false;
+    rec.onresult=e=>{const t=e.results[0][0].transcript;input.value=t;send(t,true);};
+    rec.start();
+  }
+  watch(open,v=>{if(v)scrollB();});
+  return {open,input,busy,listening,msgs,bodyEl,mode,quicks,send,voice};
+}, template:`
+<div>
+  <transition name="fade"><div class="ai-panel" v-if="open">
+    <div class="ai-head"><span style="font-size:1.3rem">🤖</span><div><b>成长小助手</b></div><span class="st">{{mode}}</span>
+      <button @click="open=false" style="color:#fff;margin-left:8px;font-size:1.2rem">✕</button></div>
+    <div class="ai-body" ref="bodyEl">
+      <div v-for="(m,i) in msgs" :key="i" class="bub" :class="m.role==='user'?'me':'ai'">{{m.content}}</div>
+      <div v-if="busy" class="bub ai">正在思考…</div>
+    </div>
+    <div class="ai-quick"><button v-for="q in quicks" :key="q" @click="send(q)">{{q}}</button></div>
+    <div class="ai-input">
+      <button class="mic" :class="{rec:listening}" @click="voice" title="语音">🎤</button>
+      <input v-model="input" @keyup.enter="send()" placeholder="问我关于宝贝的事…"/>
+      <button @click="send()">➤</button>
+    </div>
+  </div></transition>
+  <button class="ai-fab" @click="open=!open">{{open?'💬':'🤖'}}</button>
+</div>` };
+
+/* ---------- ROOT APP ---------- */
+const AuthGate={ setup(){
+  const tab=ref('login'); const form=reactive({u:'',p:'',code:'',remember:false}); const err=ref(''); const busy=ref(false);
+  const regHint='演示邀请码：FAMILY-2024';
+  onMounted(()=>{try{const r=JSON.parse(LS.getItem('bgt_remember')||'null');if(r){form.u=r.u;form.p=r.p;form.remember=true;}}catch(e){}});
+  function login(){err.value='';const u=(state.db.users||[]).find(x=>x.username===form.u&&x.password===form.p);if(!u){err.value='账号或密码不正确';return;}if(u.disabled){err.value='该账号已被禁用，请联系管理员';return;}setSession(u,form.remember);go('home');}
+  function register(){err.value='';if(!form.u||form.p.length<4){err.value='请填写用户名，密码至少 4 位';return;}const inv=(state.db.invites||[]).find(i=>i.code===form.code&&!i.usedBy);if(!inv){err.value='邀请码无效或已被使用';return;}if((state.db.users||[]).find(x=>x.username===form.u)){err.value='该用户名已被注册';return;}const nu={id:uid(),username:form.u,password:form.p,role:'member'};state.db.users.push(nu);inv.usedBy=form.u;inv.usedAt=new Date().toISOString();setSession(nu,false);go('home');}
+  function submit(){tab.value==='login'?login():register();}
+  return {tab,form,err,busy,submit,regHint,state};
+}, template:`
+<div class="login-wrap"><div class="card login-card">
+  <div style="text-align:center;margin-bottom:16px"><div style="display:flex;justify-content:center;margin-bottom:6px"><img v-if="state.db.settings.faviconUrl" :src="state.db.settings.faviconUrl" alt="站点图标" style="width:64px;height:64px;border-radius:16px;object-fit:contain;background:#fff;box-shadow:var(--shadow-sm);padding:6px"/><div v-else style="font-size:2.4rem">🍼</div></div><h2>{{tab==='login'?'欢迎回来':'注册家庭账号'}}</h2><p style="color:var(--c-muted);font-size:.9rem">{{tab==='login'?'登录后查看宝贝的成长记录':'凭管理员邀请码创建账号'}}</p></div>
+  <div style="display:flex;gap:6px;margin-bottom:18px"><button class="btn sm" :class="{gray:tab!=='login'}" style="flex:1" @click="tab='login';err=''">登录</button><button class="btn sm" :class="{gray:tab!=='register'}" style="flex:1" @click="tab='register';err=''">注册</button></div>
+  <div class="field"><label>用户名</label><input v-model="form.u" @keyup.enter="submit" placeholder="用户名"/></div>
+  <div class="field"><label>密码</label><input v-model="form.p" type="password" @keyup.enter="submit" placeholder="密码"/></div>
+  <div class="field" v-if="tab==='register'"><label>邀请码</label><input v-model="form.code" @keyup.enter="submit" placeholder="管理员提供的邀请码"/></div>
+  <label class="checkline" v-if="tab==='login'" style="margin-bottom:16px"><input type="checkbox" v-model="form.remember"/> 记住账号密码（本设备）</label>
+  <p v-if="err" style="color:#e0576a;margin-bottom:12px">⚠️ {{err}}</p>
+  <button class="btn" style="width:100%" :disabled="busy" @click="submit">{{busy?'请稍候…':(tab==='login'?'登 录':'注册并进入')}}</button>
+  <p v-if="tab==='register'" style="text-align:center;color:var(--c-muted);font-size:.82rem;margin-top:14px">{{regHint}}</p>
+</div></div>` };
+
+const AdInvites={ setup(){
+  const list=computed(()=>state.db.invites||[]);
+  function gen(){state.db.invites.unshift({id:uid(),code:'FAM-'+Math.random().toString(36).slice(2,8).toUpperCase(),note:'',usedBy:null,usedAt:null,createdAt:new Date().toISOString()});}
+  async function del(i){if(await confirmDialog('撤销邀请码 '+i.code+' ？'))state.db.invites=state.db.invites.filter(x=>x.id!==i.id);}
+  return {list,gen,del};
+}, template:`
+<div>
+  <div class="admin-head"><h2>🎟️ 邀请码管理</h2><button class="btn" @click="gen">+ 生成邀请码</button></div>
+  <p style="color:var(--c-muted);margin-bottom:14px">家人凭一个未使用的邀请码即可注册账号登录查看。</p>
+  <div class="list-row" v-for="i in list" :key="i.id">
+    <div class="grow"><b style="font-family:monospace;font-size:1.05rem;letter-spacing:1px">{{i.code}}</b><small>{{i.note||'—'}} · {{i.used?('已被 '+i.usedBy+' 使用'):'未使用'}}</small></div>
+    <span class="pill" :class="i.used?'ok':'pend'">{{i.used?'已使用':'可用'}}</span>
+    <button v-if="!i.used" class="btn danger sm" @click="del(i)">撤销</button>
+  </div>
+  <p v-if="!list.length" style="color:var(--c-muted)">还没有邀请码，点右上角生成一个发给家人。</p>
+</div>` };
+
+const App={ components:{SiteNav,SiteFooter,Lightbox,AiWidget,AuthGate,ShareView}, setup(){
+  const views={home:Home,timeline:Timeline,gallery:Gallery,videos:Videos,growth:Growth,vaccine:Vaccine,daily:Daily,diary:Diary,messages:Messages,about:About,profile:Profile,login:Login,admin:Admin};
+  const cur=computed(()=>{const n=route.name;const v=views[n];if(!v)return Home;
+    if(['timeline','gallery','videos','growth','vaccine','daily','diary','messages','about'].includes(n)&&state.db.settings.modules[n]===false)return Home;if(n==='admin'&&state.session.role!=='admin')return Home;return v;});
+  const showFooter=computed(()=>!['login','admin'].includes(route.name));
+  watch(()=>[route.name,route.params.id],()=>observeReveals());
+  return {cur,showFooter,state,route,up:uploadState,cf:confirmState,confirmYes,confirmNo};
+}, template:`
+<div>
+  <ShareView v-if="route.name==='share'"/>
+  <AuthGate v-else-if="!state.session.loggedIn"/>
+  <template v-else>
+    <SiteNav/>
+    <main><component :is="cur"/></main>
+    <SiteFooter v-if="showFooter"/>
+    <AiWidget/>
+  </template>
+  <div v-if="up.active" class="upbar"><div class="upbar-card"><div class="upbar-row"><span>⬆️ 正在上传 {{up.label}}<template v-if="up.total>1"> · {{up.index}}/{{up.total}}</template></span><b>{{up.pct}}%</b></div><div class="upbar-track"><i :style="{width:up.pct+'%'}"></i></div></div></div>
+  <div v-if="cf.open" class="modal-bg" style="z-index:210" @click.self="confirmNo">
+    <div class="card" style="max-width:360px;padding:26px;text-align:center">
+      <div style="font-size:2rem">🗑️</div>
+      <p style="margin:12px 0 22px;color:#5b5870;white-space:pre-wrap">{{cf.message}}</p>
+      <div style="display:flex;gap:10px;justify-content:center"><button class="btn gray" @click="confirmNo">取消</button><button class="btn danger" @click="confirmYes">确定删除</button></div>
+    </div>
+  </div>
+  <Lightbox/>
+</div>` };
+
+/* ---------- bootstrap ---------- */
+const app=createApp(App);
+app.config.globalProperties.isVideo=isVideo;app.config.globalProperties.vxInfo=vxInfo;app.config.globalProperties.vxMonLabel=vxMonLabel;
+[['AdOverview',AdOverview],['AdBaby',AdBaby],['AdMilestones',AdMilestones],['AdAlbums',AdAlbums],['AdGrowth',AdGrowth],['AdDaily',AdDaily],['AdDiary',AdDiary],['AdMessages',AdMessages],['AdSettings',AdSettings],['AdVideos',AdVideos],['AdInvites',AdInvites],['AdMembers',AdMembers],['AdRecaps',AdRecaps],['AdVaccines',AdVaccines],['Toggle',Toggle],['MediaThumb',MediaThumb],['AuthGate',AuthGate],['ShareView',ShareView]].forEach(([n,c])=>app.component(n,c));
+parseHash();
+window.addEventListener('hashchange',parseHash);
+app.mount('#app');
+applyTheme();
+observeReveals();
+</script>
+</body>
+</html>

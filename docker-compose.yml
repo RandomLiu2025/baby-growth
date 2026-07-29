@@ -1,0 +1,44 @@
+services:
+  app:
+    build: .
+    container_name: baby-growth
+    ports:
+      - "8000:8000"
+    environment:
+      # 可用根目录 .env 覆盖（deploy.sh 会自动生成随机 SECRET_KEY）
+      - SECRET_KEY=${SECRET_KEY:-please-change-this-to-a-long-random-string}
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-10080}
+      - DATABASE_URL=sqlite:///./data/baby.db
+      - UPLOAD_DIR=./data/uploads
+      - CLIENT_DIR=/app/client
+      - CORS_ORIGINS=${CORS_ORIGINS:-*}
+      - MAX_IMAGE_MB=${MAX_IMAGE_MB:-10}
+      - MAX_VIDEO_MB=${MAX_VIDEO_MB:-200}
+    volumes:
+      # 数据库与上传文件持久化到宿主机 ./data，备份只需复制该目录
+      - ./data:/app/server/data
+    restart: unless-stopped
+
+  # 反向代理 + 自动 HTTPS（仅在 --profile proxy 时启用，无需宿主机装 nginx）
+  # 启用： SITE_ADDRESS=你的域名 docker compose --profile proxy up -d --build
+  caddy:
+    image: caddy:2-alpine
+    profiles: ["proxy"]
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - SITE_ADDRESS=${SITE_ADDRESS:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:
