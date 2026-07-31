@@ -17,6 +17,7 @@ class User(Base):
     password_hash = Column(String, nullable=False)
     role = Column(String, default="member")   # admin | member
     disabled = Column(Boolean, default=False)
+    sessionVersion = Column(Integer, nullable=False, default=0)
     createdAt = Column(String, default=now_iso)
 
     def as_dict(self):
@@ -97,7 +98,7 @@ class Photo(Base):
     url = Column(Text, default="")
     caption = Column(String, default="")
     desc = Column(Text, default="")
-    takenAt = Column(String, default="")
+    takenAt = Column(String, default="", index=True)
     sort = Column(Integer, default=0)
     album = relationship("Album", back_populates="photos")
 

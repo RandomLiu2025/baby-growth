@@ -1,0 +1,7 @@
+{
+  "name": "baby-growth",
+  "private": true,
+  "scripts": {
+    "check:js": "node --check client/time.js && node --check client/compat.js && node --check client/ui-state.js && node --check client/api.js && node --check client/defaults.js && node --check client/upload-utils.js && node --check client/components.js && node --check client/app.js"
+  }
+}

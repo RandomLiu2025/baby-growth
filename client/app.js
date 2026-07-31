@@ -1,9 +1,27 @@
 /* 宝贝成长记 · 前端应用逻辑（Vue 3 全局构建，无需打包） */
-/* ============================================================
-   宝贝成长记 — 单文件演示版 (Vue 3 + ECharts, 数据存 localStorage)
-   ============================================================ */
 const { createApp, reactive, computed, ref, watch, onMounted, onUnmounted, nextTick } = Vue;
-const LS_KEY = 'bgt_demo_v1';
+const { albumNeedsLoad, albumPhotoCount, cloneData, diaryImageCount, diaryNeedsLoad, isVideoUrl, normalizeBootstrap, sameId } = window.BabyGrowthCompat;
+const { createActionGate, createHistoryPager, createToastStore, startupErrorMessage } = window.BabyGrowthUI;
+const { createApiClient } = window.BabyGrowthAPI;
+const { DEFAULT_SETTINGS, emptyDb } = window.BabyGrowthDefaults;
+const { detectFileKind, makeUploadId, resumeStorageKey, runPool, validateUploadFile } = window.BabyGrowthUploads;
+const { createMediaThumb, Toggle } = window.BabyGrowthComponents;
+const {
+  addDays: addCalendarDays,
+  addMonths: addCalendarMonths,
+  addYears: addCalendarYears,
+  ageText: calendarAgeText,
+  calendarDaysBetween,
+  compareDateValues,
+  createBusinessClock,
+  dateKey: businessDateKey,
+  formatDate: formatBusinessDate,
+  formatDateTime: formatBusinessDateTime,
+  formatMonthDay: formatBusinessMonthDay,
+  formatTime: formatBusinessTime,
+  monthDay: businessMonthDay,
+  yearOf: businessYearOf,
+} = window.BabyGrowthTime;
 /* 健壮存储：真实 localStorage/sessionStorage 优先；在无 allow-same-origin 的沙箱 iframe 中访问会抛 SecurityError，此时自动降级为内存存储（本会话有效） */
 function makeStore(kind){
   let ok=true, backend=null; const mem={};
@@ -19,124 +37,71 @@ function makeStore(kind){
 const LS = makeStore('localStorage');
 
 /* ---------- helpers ---------- */
-const pic = (s,w=800,h=600)=>`https://picsum.photos/seed/${s}/${w}/${h}`;
 const uid = ()=>Math.random().toString(36).slice(2,9);
 const pad = n=>String(n).padStart(2,'0');
-const iso = d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-const addMonths=(dateStr,m)=>{const d=new Date(dateStr);d.setMonth(d.getMonth()+m);return iso(d);};
-const fmtDate = s=>{const d=new Date(s);return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`;};
-const fmtMD = s=>{const d=new Date(s);return `${d.getMonth()+1}月${d.getDate()}日`;};
-function ageText(birth,ref=new Date()){
-  const b=new Date(birth); let mo=(ref.getFullYear()-b.getFullYear())*12+(ref.getMonth()-b.getMonth());
-  if(ref.getDate()<b.getDate()) mo--; if(mo<0)mo=0;
-  const y=Math.floor(mo/12), m=mo%12;
-  return (y?y+'岁':'')+(m?m+'个月':(y?'':'未满月'));
-}
-function daysOld(birth,ref=new Date()){return Math.max(0,Math.floor((ref-new Date(birth))/864e5));}
-function since(ts){const s=Math.max(0,(Date.now()-new Date(ts))/1000);const h=Math.floor(s/3600),m=Math.floor(s%3600/60);return h?`${h}小时${m}分`:`${m}分钟`;}
-function todayStr(){return iso(new Date());}
-function nowMinus(h){const d=new Date();d.setHours(d.getHours()-h);return d.toISOString();}
-
-const VXSTD=[['乙肝疫苗',1,0],['乙肝疫苗',2,1],['乙肝疫苗',3,6],['卡介苗',1,0],['脊灰疫苗',1,2],['脊灰疫苗',2,3],['脊灰疫苗',3,4],['脊灰疫苗',4,48],['百白破疫苗',1,3],['百白破疫苗',2,4],['百白破疫苗',3,5],['百白破疫苗',4,18],['麻风疫苗',1,8],['麻腮风疫苗',1,18],['乙脑减毒疫苗',1,8],['乙脑减毒疫苗',2,24],['A群流脑疫苗',1,6],['A群流脑疫苗',2,9],['甲肝减毒疫苗',1,18]];
-function vxDue(v){const b=new Date(state.db.baby.birthday);if(isNaN(b))return null;const d=new Date(b);d.setMonth(d.getMonth()+(+v.plannedMonth||0));return d;}
-function vxInfo(v){const due=vxDue(v);const t=new Date();t.setHours(0,0,0,0);let days=null;if(due){const dd=new Date(due);dd.setHours(0,0,0,0);days=Math.round((dd-t)/86400000);}if(v.date)return{label:'已接种',cls:'ok',due,days};if(days!=null&&days<0)return{label:'逾期',cls:'due',due,days};if(days!=null&&days<=30)return{label:'即将到期',cls:'pend',due,days};return{label:'待接种',cls:'grey',due,days};}
+const clockTick=ref(0);
+let businessClock=createBusinessClock();
+const iso = value=>businessDateKey(value,businessClock.timeZone);
+const fmtDate = value=>formatBusinessDate(value,businessClock.timeZone);
+const fmtMD = value=>formatBusinessMonthDay(value,businessClock.timeZone);
+function todayStr(){clockTick.value;return businessClock.today();}
+function ageText(birth,ref){return calendarAgeText(birth,ref===undefined?todayStr():iso(ref));}
+function daysOld(birth,ref){const reference=ref===undefined?todayStr():iso(ref);return Math.max(0,calendarDaysBetween(birth,reference));}
+function since(ts){clockTick.value;const value=new Date(ts).getTime();if(!Number.isFinite(value))return'—';const s=Math.max(0,(businessClock.now().getTime()-value)/1000);const h=Math.floor(s/3600),m=Math.floor(s%3600/60);return h?`${h}小时${m}分`:`${m}分钟`;}
+function businessYear(){return businessYearOf(todayStr(),businessClock.timeZone);}
+function vxDue(v){const birth=iso(state.db.baby.birthday);return birth?addCalendarMonths(birth,+v.plannedMonth||0):null;}
+function vxInfo(v){const due=vxDue(v);const days=due?calendarDaysBetween(todayStr(),due):null;if(v.date)return{label:'已接种',cls:'ok',due,days};if(days!=null&&days<0)return{label:'逾期',cls:'due',due,days};if(days!=null&&days<=30)return{label:'即将到期',cls:'pend',due,days};return{label:'待接种',cls:'grey',due,days};}
 function vxMonLabel(m){m=+m;if(m===0)return '出生时';if(m<12)return m+' 月龄';const y=Math.floor(m/12),mm=m%12;return mm?(y+'岁'+mm+'月'):(y+' 岁');}
 
-/* ---------- seed ---------- */
-function buildSeed(){
-  const birth='2024-09-15';
-  const gt=[[0,50,3.3],[1,54.5,4.2],[2,57.8,5.1],[3,60.2,5.8],[4,62.3,6.4],[5,64,6.9],[6,65.7,7.3],
-    [8,68.5,7.9],[10,71,8.5],[12,74,9.0],[15,77.5,9.7],[18,80.5,10.4],[21,83,11.0]];
-  const growth=gt.map(([mo,h,w])=>({id:uid(),date:addMonths(birth,mo),height:h,weight:w,head:(34+mo*0.6).toFixed(1)*1}));
-  const daily=[
-    {id:uid(),type:'feeding',feedType:'formula',amount:150,time:nowMinus(2.2),note:'喝得很香'},
-    {id:uid(),type:'diaper',diaperType:'poop',time:nowMinus(3),note:'金黄色，正常'},
-    {id:uid(),type:'feeding',feedType:'breast',amount:120,time:nowMinus(5),note:''},
-    {id:uid(),type:'diaper',diaperType:'pee',time:nowMinus(6),note:''},
-    {id:uid(),type:'feeding',feedType:'formula',amount:160,time:nowMinus(8),note:''},
-    {id:uid(),type:'diaper',diaperType:'pee',time:nowMinus(9.5),note:''},
-    {id:uid(),type:'feeding',feedType:'formula',amount:150,time:nowMinus(11),note:'夜奶'},
-  ];
-  return {
-    baby:{name:'小满',gender:'girl',birthday:birth,avatar:pic('xiaoman-av',400,400),
-      bio:'2024年秋天来到我们身边的小天使，爱笑、爱吃、爱探索世界。这里记录她一点一滴的成长。',
-      family:'爸爸 · 妈妈 · 还有一只叫奶糖的猫'},
-    milestones:[
-      {id:uid(),date:addMonths(birth,1),title:'第一次微笑',desc:'满月刚过，对着妈妈露出了人生第一个微笑，融化了全家。',category:'情感',image:pic('ms-smile',800,500)},
-      {id:uid(),date:addMonths(birth,3),title:'学会翻身',desc:'趴着玩的时候突然一个用力翻了过来，自己都吓了一跳。',category:'大动作',image:pic('ms-roll',800,500)},
-      {id:uid(),date:addMonths(birth,6),title:'第一口辅食',desc:'开始添加米粉，小勺子送到嘴边，吃得满脸都是。',category:'饮食',image:pic('ms-food',800,500)},
-      {id:uid(),date:addMonths(birth,8),title:'会坐稳了',desc:'终于可以自己稳稳地坐着玩玩具，解放了妈妈的双手。',category:'大动作',image:pic('ms-sit',800,500)},
-      {id:uid(),date:addMonths(birth,11),title:'第一次叫妈妈',desc:'含糊却清晰地喊出了"妈妈"，妈妈激动得哭了。',category:'语言',image:pic('ms-mama',800,500)},
-      {id:uid(),date:addMonths(birth,13),title:'迈出第一步',desc:'扶着沙发慢慢松手，独立走出了摇摇晃晃的第一步！',category:'大动作',image:pic('ms-walk',800,500)},
-    ],
-    albums:[
-      {id:uid(),name:'满月纪念',date:addMonths(birth,1),desc:'小满满月啦',cover:pic('al-1',700,700),
-        photos:[1,2,3,4,5,6].map(i=>({id:uid(),url:pic('al1-'+i,900,900),caption:'满月写真 '+i,takenAt:addMonths(birth,1)}))},
-      {id:uid(),name:'百天写真',date:addMonths(birth,3),desc:'100天的小可爱',cover:pic('al-2',700,700),
-        photos:[1,2,3,4,5].map(i=>({id:uid(),url:pic('al2-'+i,900,900),caption:'百天照 '+i,takenAt:addMonths(birth,3)}))},
-      {id:uid(),name:'第一个夏天',date:addMonths(birth,10),desc:'海边的欢乐时光',cover:pic('al-3',700,700),
-        photos:[1,2,3,4,5,6,7].map(i=>({id:uid(),url:pic('al3-'+i,900,900),caption:'夏日 '+i,takenAt:addMonths(birth,10)}))},
-      {id:uid(),name:'周岁生日',date:addMonths(birth,12),desc:'一周岁快乐',cover:pic('al-4',700,700),
-        photos:[1,2,3,4].map(i=>({id:uid(),url:pic('al4-'+i,900,900),caption:'生日 '+i,takenAt:addMonths(birth,12)}))},
-    ],
-    growth,
-    daily,
-    diary:[
-      {id:uid(),date:addMonths(birth,2),title:'夜里的悄悄话',content:'今晚你又哭闹到半夜，我抱着你在客厅走了一圈又一圈。可当你在我怀里沉沉睡去，所有的疲惫都值得了。宝贝，慢慢长大呀。',images:[pic('d1',800,500)]},
-      {id:uid(),date:addMonths(birth,5),title:'第一次去公园',content:'带你去看了大大的草坪和五颜六色的花。你伸着小手想去抓飞过的蝴蝶，眼睛里满是好奇。这个世界，我想慢慢讲给你听。',images:[pic('d2a',700,500),pic('d2b',700,500)]},
-      {id:uid(),date:addMonths(birth,9),title:'牙牙学语',content:'你开始会发出各种奇怪的音节，像是在跟我们认真地讨论着什么大事。虽然听不懂，但我们都听得津津有味。',images:[pic('d3',800,500)]},
-      {id:uid(),date:addMonths(birth,12),title:'一岁啦',content:'一年前的今天你来到我们身边，小小的一只。如今你会走、会笑、会撒娇。谢谢你选择我们做你的爸爸妈妈。生日快乐，我的小满。',images:[pic('d4',800,500)]},
-    ],
-    messages:[
-      {id:uid(),name:'奶奶',content:'我的乖孙女越来越漂亮了，奶奶好想你，快点视频给奶奶看看！',createdAt:nowMinus(30),status:'approved',color:'#ef8fa4'},
-      {id:uid(),name:'小姨',content:'小满周岁快乐！小姨给你准备了大礼物哦～',createdAt:nowMinus(72),status:'approved',color:'#7fc8d4'},
-      {id:uid(),name:'王阿姨',content:'太可爱了吧！这个网站做得真用心，满满的爱。',createdAt:nowMinus(120),status:'approved',color:'#ffca7a'},
-      {id:uid(),name:'同事老张',content:'恭喜恭喜！健康成长～',createdAt:nowMinus(10),status:'pending',color:'#9b8cff'},
-    ],
-    settings:{
-      admin:{username:'admin',password:'admin123'},
-      theme:{name:'甜心粉',primary:'#ec8aa0',primaryD:'#d75f7e',secondary:'#7fc6d0',accent:'#ffc178',bg:'#fff6f3'},
-      deco:{enabled:true,opacity:0.5,emoji:['🍼','🌸','⭐','🧸','🎈','☁️','💕']},
-      modules:{timeline:true,gallery:true,growth:true,vaccine:true,daily:true,diary:true,messages:true,videos:true,about:true},
-      home:{hero:true,countdown:true,onthisday:true,carousel:true,milestones:true,growth:true,videos:true,diary:true,recap:true,vaccine:true},
-      feeding:{defaultAmount:150,dailyTarget:900},
-      ai:{enabled:false,apiKey:'',baseUrl:'https://api.openai.com/v1',model:'gpt-4o-mini'}
-    }
-  };
-}
-
 /* ---------- store (API-backed) ---------- */
-const DEFAULT_SETTINGS = {theme:{name:'甜心粉',primary:'#ec8aa0',primaryD:'#d75f7e',secondary:'#7fc6d0',accent:'#ffc178',bg:'#fff6f3'},deco:{enabled:true,opacity:0.5,emoji:['🍼','🌸','⭐','🧸','🎈','☁️','💕']},modules:{timeline:true,gallery:true,growth:true,vaccine:true,daily:true,diary:true,messages:true,videos:true,about:true},home:{hero:true,countdown:true,onthisday:true,carousel:true,milestones:true,growth:true,videos:true,diary:true,recap:true,vaccine:true},feeding:{defaultAmount:150,dailyTarget:900},ai:{enabled:false,apiKey:'',baseUrl:'https://api.openai.com/v1',model:'gpt-4o-mini'},faviconUrl:'',photoFrame:'polaroid'};
-const emptyDb = ()=>({baby:{name:'宝贝',gender:'girl',birthday:'',avatar:'',bio:'',family:''},settings:JSON.parse(JSON.stringify(DEFAULT_SETTINGS)),milestones:[],albums:[],growth:[],daily:[],diary:[],messages:[],videos:[],recaps:[],shares:[],vaccines:[],isAdmin:false});
 const state = reactive({ db: emptyDb(), session:{ loggedIn:false, role:'', username:'' }, ready:false, mobileMenu:false });
+const startup = reactive({ loading:false, error:'' });
+const toasts = reactive(createToastStore());
+const pendingActions = reactive(new Set());
+const actionGate = createActionGate(pendingActions);
+function noticeType(message){const text=String(message||'');if(/取消/.test(text))return'info';if(/成功|已保存|已创建|已复制|已完成/.test(text))return'success';return'error';}
+function notify(message,type=noticeType(message),duration=3600){return toasts.push(message,type,duration);}
+const alert = message=>notify(message);
+function runAction(key,task){return actionGate.run(key,task);}
+function actionKey(prefix,payload){try{return prefix+':'+JSON.stringify(payload);}catch(e){return prefix;}}
 
-const API = {
-  token: LS.getItem('bgt_token')||'',
-  setToken(t){ this.token=t||''; if(t){LS.setItem('bgt_token',t);}else{LS.removeItem('bgt_token');} state.session.loggedIn=!!this.token; },
-  async req(method,path,{json,form}={}){
-    const headers={}; if(this.token)headers['Authorization']='Bearer '+this.token;
-    const opt={method,headers};
-    if(form){opt.body=form;}else if(json!==undefined){headers['Content-Type']='application/json';opt.body=JSON.stringify(json);}
-    const r=await fetch('/api'+path,opt);
-    if(r.status===401){ this.setToken(''); if(String(route.name).startsWith('admin'))go('home'); throw new Error('未登录或登录已过期'); }
-    if(!r.ok){ let d=null; try{d=await r.json();}catch(e){} throw new Error((d&&d.detail)||('请求失败 '+r.status)); }
-    if(r.status===204)return null; const ct=r.headers.get('content-type')||''; return ct.includes('json')?r.json():r.text();
-  },
-  get(p){return this.req('GET',p);}, post(p,json){return this.req('POST',p,{json});},
-  put(p,json){return this.req('PUT',p,{json});}, del(p){return this.req('DELETE',p);},
-  upload(form){return this.req('POST','/upload',{form});}
-};
-function assignDb(d){ Object.assign(state.db,d); state.session.loggedIn=!!API.token; state.session.role=(d.user&&d.user.role)||''; state.session.username=(d.user&&d.user.username)||''; }
-async function refresh(){ if(_refreshPromise) return _refreshPromise; _refreshPromise=(async()=>{const d=await API.get('/bootstrap');assignDb(d);applyTheme();})(); try{return await _refreshPromise;}finally{_refreshPromise=null;} }
+const API = createApiClient({
+  storage: LS,
+  onTokenChange: loggedIn => { state.session.loggedIn=loggedIn; },
+  onUnauthorized: () => { if(String(route.name).startsWith('admin'))go('home'); },
+});
+function makeAdminHistoryPager(resource){return reactive(createHistoryPager({resource,request:path=>API.get(path)}));}
+function assignDb(d){ const normalized=normalizeBootstrap(d,emptyDb());businessClock=createBusinessClock(normalized.businessTime||{});Object.assign(state.db,normalized);state.session.loggedIn=!!normalized.user;state.session.role=(normalized.user&&normalized.user.role)||'';state.session.username=(normalized.user&&normalized.user.username)||''; }
+async function refresh(){ if(_refreshPromise) return _refreshPromise; _refreshPromise=(async()=>{const d=await API.get('/bootstrap?compact=true');assignDb(d);applyTheme();})(); try{return await _refreshPromise;}finally{_refreshPromise=null;} }
 async function loadBranding(){ try{ const b=await API.get('/branding'); if(b){ if(typeof b.faviconUrl==='string') state.db.settings.faviconUrl=b.faviconUrl; if(b.babyName) state.db.baby.name=b.babyName; applyFavicon(); } }catch(e){/* 忽略：未登录也不影响，使用默认 */} }
 // 局部更新：CRUD 端点均返回完整对象（含 id），直接改本地对应数组，避免每次操作全量重拉 /bootstrap
 // res 名与 state.db 的数组键一一对应（milestones/albums/growth/daily/diary/videos/vaccines）
 function _localArr(res){ const a=state.db[res]; return Array.isArray(a)?a:null; }
-async function apiCreate(res,obj){ const s=await API.post('/'+res,obj); const arr=_localArr(res); if(arr&&s&&s.id!=null) arr.push(s); else await refresh(); return s; }
-async function apiUpdate(res,id,obj){ const s=await API.put('/'+res+'/'+id,obj); const arr=_localArr(res); if(arr&&s&&s.id!=null){ const i=arr.findIndex(x=>x.id===id); if(i>=0) arr.splice(i,1,s); else arr.push(s); } else await refresh(); return s; }
-async function apiDelete(res,id){ await API.del('/'+res+'/'+id); const arr=_localArr(res); if(arr){ const i=arr.findIndex(x=>x.id===id); if(i>=0) arr.splice(i,1); } else await refresh(); }
-async function reseed(){ await API.post('/admin/seed'); await refresh(); }
-function doLogout(){ API.setToken(''); state.session.role=''; state.session.username=''; go('home'); }
+function markAlbumLoaded(album){if(!album)return album;album.photoCount=albumPhotoCount(album);album.photosLoaded=true;return album;}
+async function ensureAlbumLoaded(id){
+  let current=state.db.albums.find(album=>sameId(album.id,id));
+  if(!albumNeedsLoad(current))return current;
+  const detail=markAlbumLoaded(await runAction('album:load:'+id,()=>API.get('/albums/'+encodeURIComponent(id))));
+  current=state.db.albums.find(album=>sameId(album.id,id));
+  if(current)Object.assign(current,detail);else state.db.albums.push(detail);
+  state.db.albumsCompact=state.db.albums.some(albumNeedsLoad);
+  return current||detail;
+}
+function markDiaryLoaded(diary){if(!diary)return diary;diary.imageCount=diaryImageCount(diary);diary.detailLoaded=true;return diary;}
+async function ensureDiaryLoaded(id){
+  let current=state.db.diary.find(diary=>sameId(diary.id,id));
+  if(!diaryNeedsLoad(current))return current;
+  const detail=markDiaryLoaded(await runAction('diary:load:'+id,()=>API.get('/diary/'+encodeURIComponent(id))));
+  current=state.db.diary.find(diary=>sameId(diary.id,id));
+  if(current)Object.assign(current,detail);else state.db.diary.push(detail);
+  state.db.diaryCompact=state.db.diary.some(diaryNeedsLoad);
+  return current||detail;
+}
+async function apiCreate(res,obj){return runAction(actionKey('create:'+res,obj),async()=>{let s=await API.post('/'+res,obj);if(res==='albums')s=markAlbumLoaded(s);if(res==='diary')s=markDiaryLoaded(s);const arr=_localArr(res);if(arr&&s&&s.id!=null){arr.push(s);if(res==='daily'&&state.db.dailyCompact)state.db.dailyTotal=(+state.db.dailyTotal||0)+1;}else await refresh();return s;});}
+async function apiUpdate(res,id,obj){return runAction(actionKey('update:'+res+':'+id,obj),async()=>{let s=await API.put('/'+res+'/'+id,obj);if(res==='albums')s=markAlbumLoaded(s);if(res==='diary')s=markDiaryLoaded(s);const arr=_localArr(res);if(arr&&s&&s.id!=null){const i=arr.findIndex(x=>sameId(x.id,id));if(i>=0)arr.splice(i,1,s);else arr.push(s);}else await refresh();return s;});}
+async function apiDelete(res,id){return runAction('delete:'+res+':'+id,async()=>{await API.del('/'+res+'/'+id);const arr=_localArr(res);if(arr){const i=arr.findIndex(x=>x.id===id);if(i>=0)arr.splice(i,1);}else await refresh();});}
+async function reseed(){return runAction('admin:seed',async()=>{await API.post('/admin/seed');await refresh();});}
+async function doLogout(){ try{await API.post('/auth/logout');}catch(e){} API.setToken('');state.session.loggedIn=false;state.session.role='';state.session.username='';go('home'); }
 
 /* ---------- theme + deco ---------- */
 function shade(hex,amt){const h=(hex||'').replace('#','');if(h.length!==6)return hex;const n=parseInt(h,16);if(isNaN(n))return hex;const f=Math.max(0,1-amt);const c=[(n>>16)&255,(n>>8)&255,n&255].map(x=>Math.round(x*f).toString(16).padStart(2,'0'));return '#'+c.join('');}
@@ -171,12 +136,12 @@ function buildDeco(){
     s.style.animationDelay=(Math.random()*8)+'s';s.style.fontSize=(1.4+Math.random()*1.8)+'rem';el.appendChild(s);}
 }
 /* ---------- derived data ---------- */
-function sortedGrowth(){return state.db.growth.slice().sort((a,b)=>new Date(a.date)-new Date(b.date));}
+function sortedGrowth(){return state.db.growth.slice().sort((a,b)=>compareDateValues(a.date,b.date,businessClock.timeZone));}
 function latestGrowth(){const g=sortedGrowth();return g[g.length-1];}
 function dailyStats(){
   const logs=state.db.daily.slice().sort((a,b)=>new Date(b.time)-new Date(a.time));
   const t=todayStr();
-  const today=logs.filter(x=>iso(new Date(x.time))===t);
+  const today=logs.filter(x=>iso(x.time)===t);
   const feeds=today.filter(x=>x.type==='feeding');
   const totalMl=feeds.reduce((s,x)=>s+(+x.amount||0),0);
   const pee=today.filter(x=>x.type==='diaper'&&x.diaperType==='pee').length;
@@ -192,19 +157,23 @@ let _refreshPromise=null;
 function go(name,params={}){route.name=name;route.params=params;state.mobileMenu=false;location.hash=name+(params.id?('/'+params.id):'');window.scrollTo({top:0,behavior:'smooth'});}
 function parseHash(){const h=location.hash.replace(/^#/,'').split('/');if(h[0]){route.name=h[0];route.params=h[1]?{id:h[1]}:{};}}
 const lb=reactive({open:false,list:[],i:0,editable:false});
-const uploadState = reactive({active:false,pct:0,label:'',index:0,total:0,cancelled:false,_xhrs:new Set()});
+const uploadState = reactive({active:false,pct:0,label:'',index:0,total:0,cancelled:false,cancellable:true,uploadId:'',resumeKey:'',_xhrs:new Set()});
 function cancelUpload(){
-  if(!uploadState.active) return;
+  if(!uploadState.active||!uploadState.cancellable) return;
   uploadState.cancelled=true;
   uploadState._xhrs.forEach(h=>{ try{ h.abort(); }catch(e){} });
+  const uploadId=uploadState.uploadId, resumeKey=uploadState.resumeKey;
+  uploadState.uploadId='';uploadState.resumeKey='';
+  if(resumeKey)LS.removeItem(resumeKey);
+  if(uploadId)API.del('/upload/'+encodeURIComponent(uploadId)).catch(err=>{if(err&&err.status!==404)console.error('cancel upload cleanup failed',err);});
 }
 function _cancelErr(){ const e=new Error('已取消上传'); e.cancelled=true; return e; }
 const confirmState = reactive({open:false,message:'',_resolve:null});
 function confirmDialog(message){return new Promise(res=>{confirmState.message=message;confirmState._resolve=res;confirmState.open=true;});}
 function confirmYes(){confirmState.open=false;const r=confirmState._resolve;confirmState._resolve=null;if(r)r(true);}
 function confirmNo(){confirmState.open=false;const r=confirmState._resolve;confirmState._resolve=null;if(r)r(false);}
-async function saveMediaEdit(item){ if(item&&item.id) await API.put('/photos/'+item.id,{caption:item.caption||'',desc:item.desc||''}); }
-async function saveVideoEdit(item){ if(item&&item.id) await API.put('/videos/'+item.id,{title:item.title||'',desc:item.desc||'',date:item.date,url:item.url,cover:item.cover||''}); }
+async function saveMediaEdit(item){if(item&&item.id){const payload={caption:item.caption||'',desc:item.desc||''};return runAction(actionKey('update:photos:'+item.id,payload),()=>API.put('/photos/'+item.id,payload));}return null;}
+async function saveVideoEdit(item){if(item&&item.id){const payload={title:item.title||'',desc:item.desc||'',date:item.date,url:item.url,cover:item.cover||''};return runAction(actionKey('update:videos:'+item.id,payload),()=>API.put('/videos/'+item.id,payload));}return null;}
 function openLightbox(list,i,editable){lb.list=list;lb.i=i;lb.open=true;lb.editable=!!editable;}
 let _io; function observeReveals(){nextTick(()=>{if(_io)_io.disconnect();_io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('in');}),{threshold:.1});document.querySelectorAll('.reveal:not(.in)').forEach(el=>_io.observe(el));});}
 
@@ -255,36 +224,45 @@ const SiteNav={ setup(){
         <a v-for="l in more" :key="l[0]" :class="{active:route.name===l[0]}" @click="goItem(l[0])"><span class="nav-emoji" aria-hidden="true">{{l[2]}}</span>{{l[1]}}</a>
       </div>
     </div>
-    <a class="adminlink" :class="{active:route.name==='profile'}" @click="go('profile')">👤 {{state.session.username||'我的'}}</a>
-    <a v-if="state.session.role==='admin'" class="adminlink" :class="{active:route.name.startsWith('admin')}" @click="go('admin')">🔑 后台</a>
-    <a class="adminlink" style="cursor:pointer" @click="logout">🚪 退出</a>
+    <a v-if="state.session.role!=='admin'" class="adminlink" :class="{active:route.name==='profile'}" @click="go('profile')">👤 {{state.session.username||'我的'}}</a>
+    <a v-if="state.session.role==='admin'" class="adminlink" :class="{active:route.name.startsWith('admin')}" @click="go('admin')">⚙️ 管理</a>
+    <a v-if="state.session.role!=='admin'" class="adminlink" style="cursor:pointer" @click="logout">🚪 退出</a>
   </nav>
 </div></header>` };
 
-const SiteFooter={ template:`<footer class="footer container">用 ❤️ 记录成长 · {{new Date().getFullYear()}}</footer>` };
+const SiteFooter={ setup(){return{businessYear};},template:`<footer class="footer container">用 ❤️ 记录成长 · {{businessYear()}}</footer>` };
 
 const Lightbox={ setup(){
   const cur=computed(()=>lb.list[lb.i]||{});
   const editing=ref(false);
-  const nav=d=>{editing.value=false;lb.i=(lb.i+d+lb.list.length)%lb.list.length;};
-  function close(){editing.value=false;lb.open=false;}
-  function startEdit(){editing.value=true;}
-  async function saveEdit(){try{await saveMediaEdit(cur.value);}catch(e){alert(e.message);}editing.value=false;}
+  const draft=ref(null);
+  const saving=ref(false);
+  function cancelEdit(){editing.value=false;draft.value=null;}
+  const nav=d=>{cancelEdit();lb.i=(lb.i+d+lb.list.length)%lb.list.length;};
+  function close(){cancelEdit();lb.open=false;}
+  function startEdit(){draft.value=cloneData(cur.value);editing.value=true;}
+  async function saveEdit(){
+    if(!draft.value||saving.value)return;
+    saving.value=true;
+    try{const saved=await saveMediaEdit(draft.value);if(saved)Object.assign(cur.value,saved);cancelEdit();}
+    catch(e){alert(e.message);}
+    finally{saving.value=false;}
+  }
   const onKey=e=>{if(!lb.open)return;if(e.key==='Escape')close();if(!editing.value){if(e.key==='ArrowLeft')nav(-1);if(e.key==='ArrowRight')nav(1);}};
   onMounted(()=>window.addEventListener('keydown',onKey));
-  return {lb,cur,nav,close,editing,startEdit,saveEdit,state};
+  return {lb,cur,nav,close,editing,draft,saving,startEdit,cancelEdit,saveEdit,state};
 }, template:`
-<transition name="fade"><div class="lb" v-if="lb.open" @click.self="close">
-  <span class="x" @click="close">✕</span>
-  <span class="arw l" @click="nav(-1)" v-if="lb.list.length>1&&!editing">‹</span>
+<transition name="fade"><div class="lb" v-if="lb.open" role="dialog" aria-modal="true" aria-label="媒体预览" @click.self="close">
+  <button type="button" class="x" @click="close" aria-label="关闭预览">✕</button>
+  <button type="button" class="arw l" @click="nav(-1)" v-if="lb.list.length>1&&!editing" aria-label="上一项">‹</button>
   <figure class="lb-fig">
     <video v-if="isVideo(cur.url)" :src="cur.url" controls autoplay playsinline class="lb-media"></video>
     <img v-else :src="cur.url" :alt="cur.caption" class="lb-media"/>
     <figcaption class="lb-cap">
       <template v-if="editing">
-        <input v-model="cur.caption" placeholder="标题" class="lb-input"/>
-        <textarea v-model="cur.desc" placeholder="描述（可选）" rows="2" class="lb-input"></textarea>
-        <div style="display:flex;gap:8px;justify-content:center;margin-top:8px"><button class="btn gray sm" @click="editing=false">取消</button><button class="btn sm" @click="saveEdit">保存</button></div>
+        <input v-model="draft.caption" placeholder="标题" class="lb-input"/>
+        <textarea v-model="draft.desc" placeholder="描述（可选）" rows="2" class="lb-input"></textarea>
+        <div style="display:flex;gap:8px;justify-content:center;margin-top:8px"><button class="btn gray sm" :disabled="saving" @click="cancelEdit">取消</button><button class="btn sm" :disabled="saving" @click="saveEdit">{{saving?'保存中…':'保存'}}</button></div>
       </template>
       <template v-else>
         <div v-if="cur.caption" class="lb-title">{{cur.caption}}</div>
@@ -293,16 +271,18 @@ const Lightbox={ setup(){
       </template>
     </figcaption>
   </figure>
-  <span class="arw r" @click="nav(1)" v-if="lb.list.length>1&&!editing">›</span>
+  <button type="button" class="arw r" @click="nav(1)" v-if="lb.list.length>1&&!editing" aria-label="下一项">›</button>
 </div></transition>` };
 
-const isVideo = u => /\.(mp4|webm|ogg|ogv|mov|m4v)(\?|#|$)/i.test(u||'');
-function thumbUrl(u){ if(typeof u==='string'&&u.startsWith('/uploads/')){ const m=u.match(/\.(jpe?g|png|webp)(\?|#|$)/i); if(m){ const i=u.lastIndexOf('.'); return u.slice(0,i)+'_thumb'+u.slice(i); } } return u; }
-const MediaThumb = { props:['url'], setup(props){ const onErr=e=>{ const full=e.target.getAttribute('data-full'); if(full&&e.target.src!==full) e.target.src=full; }; return { props, isVideo, thumbUrl, onErr }; }, template:`
-<div class="mthumb">
-  <video v-if="isVideo(props.url)" class="mediafill" :src="props.url" muted playsinline preload="metadata"></video>
-  <img v-else class="mediafill" :src="thumbUrl(props.url)" :data-full="props.url" @error="onErr" loading="lazy" decoding="async" alt=""/>
-  <span v-if="isVideo(props.url)" class="playbadge">▶</span>
+const isVideo = isVideoUrl;
+const MediaThumb = createMediaThumb(isVideo);
+const HistoryPager={ props:['pager'], setup(props){
+  async function turn(method){try{await props.pager[method]();}catch(e){}}
+  return {turn};
+}, template:`
+<div class="history-pager" role="navigation" aria-label="历史记录分页">
+  <span>共 {{pager.total}} 条 · 第 {{pager.page}} / {{pager.pageCount}} 页</span>
+  <div><button class="btn gray sm" :disabled="!pager.hasPrevious||pager.loading" @click="turn('previous')">上一页</button><button class="btn gray sm" :disabled="!pager.hasMore||pager.loading" @click="turn('next')">下一页</button></div>
 </div>` };
 
 /* ---------- HOME ---------- */
@@ -310,17 +290,20 @@ const Home={ setup(){
   const s=state.db, cfg=computed(()=>s.settings.home);
   const g=computed(()=>latestGrowth());
   const stats=computed(()=>dailyStats());
-  const recentMs=computed(()=>s.milestones.slice().sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,3));
-  const recentVideos=computed(()=>(s.videos||[]).slice().sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,3));
+  const recentMs=computed(()=>s.milestones.slice().sort((a,b)=>compareDateValues(b.date,a.date,businessClock.timeZone)).slice(0,3));
+  const recentVideos=computed(()=>(s.videos||[]).slice().sort((a,b)=>compareDateValues(b.date,a.date,businessClock.timeZone)).slice(0,3));
   const vxReminders=computed(()=>(s.vaccines||[]).filter(v=>!v.date).map(v=>({v,i:vxInfo(v)})).filter(x=>x.i.days!=null&&x.i.days<=60).sort((a,b)=>a.i.days-b.i.days).slice(0,4));
-  const slides=computed(()=>{const arr=[];s.albums.forEach(a=>{if(a.photos[0])arr.push({url:a.photos[0].url,cap:a.name});});return arr.slice(0,6);});
+  const slides=computed(()=>{const arr=[];s.albums.forEach(a=>{const url=a.cover||((a.photos||[])[0]&&a.photos[0].url);if(url)arr.push({url,cap:a.name});});return arr.slice(0,6);});
   const ci=ref(0); let timer;
-  onMounted(()=>{timer=setInterval(()=>{if(slides.value.length)ci.value=(ci.value+1)%slides.value.length;},4000);observeReveals();});
+  const currentSlide=computed(()=>slides.value[ci.value]||slides.value[0]||null);
+  const reduceMotion=typeof window.matchMedia==='function'&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  watch(()=>slides.value.length,length=>{if(!length||ci.value>=length)ci.value=0;});
+  onMounted(()=>{if(!reduceMotion)timer=setInterval(()=>{if(slides.value.length)ci.value=(ci.value+1)%slides.value.length;},4000);observeReveals();});
   onUnmounted(()=>clearInterval(timer));
-  function daysUntil(dstr){const t=new Date();t.setHours(0,0,0,0);const d=new Date(dstr);d.setHours(0,0,0,0);return Math.round((d-t)/86400000);}
-  const anniv=computed(()=>{const b=s.baby.birthday;if(!b)return [];const bd=new Date(b);if(isNaN(bd))return [];const out=[];const plus=n=>{const d=new Date(bd);d.setDate(d.getDate()+n);return d;};const addm=m=>{const d=new Date(bd);d.setMonth(d.getMonth()+m);return d;};out.push({label:'百天',date:plus(99)});out.push({label:'半岁',date:addm(6)});for(let y=1;y<=8;y++){const d=new Date(bd);d.setFullYear(bd.getFullYear()+y);out.push({label:y+'岁生日',date:d});}return out.map(x=>({label:x.label,date:iso(x.date),days:daysUntil(iso(x.date))})).filter(x=>x.days>=0).sort((a,b)=>a.days-b.days).slice(0,3);});
-  const onthisday=computed(()=>{const t=new Date();const md=(t.getMonth()+1)+'-'+t.getDate();const Y=t.getFullYear();const out=[];const push=(date,icon,title,img)=>{if(!date)return;const d=new Date(date);if(isNaN(d))return;if(((d.getMonth()+1)+'-'+d.getDate())===md&&d.getFullYear()<Y)out.push({date,icon,title,img,years:Y-d.getFullYear()});};s.milestones.forEach(m=>push(m.date,'✨',m.title,m.image));(s.diary||[]).forEach(d=>push(d.date,'📖',d.title,(d.images||[])[0]));(s.videos||[]).forEach(v=>push(v.date,'🎬',v.title,v.cover||v.url));(s.albums||[]).forEach(a=>(a.photos||[]).forEach(p=>push(p.takenAt,'📷',p.caption||a.name,p.url)));return out.sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,6);});
-  return {s,cfg,g,stats,recentMs,recentVideos,vxReminders,anniv,onthisday,slides,ci,ageText,fmtDate,go,daysOld};
+  function daysUntil(dstr){return calendarDaysBetween(todayStr(),iso(dstr));}
+  const anniv=computed(()=>{const birth=iso(s.baby.birthday);if(!birth)return [];const out=[{label:'百天',date:addCalendarDays(birth,99)},{label:'半岁',date:addCalendarMonths(birth,6)}];for(let year=1;year<=8;year++)out.push({label:year+'岁生日',date:addCalendarYears(birth,year)});return out.map(item=>({...item,days:daysUntil(item.date)})).filter(item=>item.days>=0).sort((a,b)=>a.days-b.days).slice(0,3);});
+  const onthisday=computed(()=>{const today=todayStr();const md=businessMonthDay(today,businessClock.timeZone);const year=businessYearOf(today,businessClock.timeZone);const out=[];const push=(value,icon,title,img)=>{const key=iso(value);const itemYear=businessYearOf(key,businessClock.timeZone);if(key&&businessMonthDay(key,businessClock.timeZone)===md&&itemYear<year)out.push({date:key,icon,title,img,years:year-itemYear});};s.milestones.forEach(m=>push(m.date,'✨',m.title,m.image));(s.diary||[]).forEach(d=>push(d.date,'📖',d.title,(d.images||[])[0]));(s.videos||[]).forEach(v=>push(v.date,'🎬',v.title,v.cover||v.url));if(s.albumsCompact)(s.onThisDayPhotos||[]).forEach(p=>push(p.date,'📷',p.title,p.image));else(s.albums||[]).forEach(a=>(a.photos||[]).forEach(p=>push(p.takenAt,'📷',p.caption||a.name,p.url)));return out.sort((a,b)=>compareDateValues(b.date,a.date,businessClock.timeZone)).slice(0,6);});
+  return {s,cfg,g,stats,recentMs,recentVideos,vxReminders,anniv,onthisday,slides,currentSlide,ci,ageText,fmtDate,go,daysOld};
 }, template:`
 <div>
   <section class="hero" v-if="cfg.hero">
@@ -349,9 +332,11 @@ const Home={ setup(){
 
   <section class="section container" v-if="cfg.carousel && slides.length">
     <div class="carousel">
-      <div v-for="(sl,i) in slides" :key="i" class="slide" :class="{on:i===ci}" :style="{backgroundImage:'url('+sl.url+')'}"></div>
-      <div class="cap">{{slides[ci]?.cap}}</div>
-      <div class="dots"><i v-for="(sl,i) in slides" :key="i" :class="{on:i===ci}" @click="ci=i"></i></div>
+      <div v-if="currentSlide" :key="currentSlide.url" class="slide on" :style="{backgroundImage:'url('+currentSlide.url+')'}"></div>
+      <div class="cap">{{currentSlide?.cap}}</div>
+      <div class="dots" role="group" aria-label="轮播图切换">
+        <button type="button" v-for="(sl,i) in slides" :key="i" class="dot" :class="{on:i===ci}" :aria-label="'显示第 '+(i+1)+' 张照片：'+sl.cap" :aria-current="i===ci?'true':'false'" @click="ci=i"></button>
+      </div>
     </div>
   </section>
 
@@ -428,10 +413,10 @@ const Home={ setup(){
 
 /* ---------- TIMELINE ---------- */
 const Timeline={ setup(){
-  const items=computed(()=>state.db.milestones.slice().sort((a,b)=>new Date(b.date)-new Date(a.date)));
-  const years=computed(()=>['全部',...[...new Set(items.value.map(m=>new Date(m.date).getFullYear()))].sort((a,b)=>b-a)]);
+  const items=computed(()=>state.db.milestones.slice().sort((a,b)=>compareDateValues(b.date,a.date,businessClock.timeZone)));
+  const years=computed(()=>['全部',...[...new Set(items.value.map(m=>businessYearOf(m.date,businessClock.timeZone)).filter(Boolean))].sort((a,b)=>b-a)]);
   const yr=ref('全部');
-  const shown=computed(()=>yr.value==='全部'?items.value:items.value.filter(m=>new Date(m.date).getFullYear()===yr.value));
+  const shown=computed(()=>yr.value==='全部'?items.value:items.value.filter(m=>businessYearOf(m.date,businessClock.timeZone)===yr.value));
   watch([yr,shown],()=>observeReveals()); onMounted(observeReveals);
   return {items,years,yr,shown,fmtDate,ageText,state,openLightbox};
 }, template:`
@@ -445,7 +430,7 @@ const Timeline={ setup(){
     <div class="tl-item reveal" v-for="m in shown" :key="m.id">
       <div class="dot"></div>
       <div class="card tl-card">
-        <div class="dt">{{fmtDate(m.date)}} · {{ageText(state.db.baby.birthday,new Date(m.date))||'新生'}} · <span class="tag">{{m.category}}</span></div>
+        <div class="dt">{{fmtDate(m.date)}} · {{ageText(state.db.baby.birthday,m.date)||'新生'}} · <span class="tag">{{m.category}}</span></div>
         <h4>{{m.title}}</h4>
         <p style="color:var(--c-muted)">{{m.desc}}</p>
         <div class="tl-img" v-if="m.image" :data-date="m.date?fmtDate(m.date):null" @click="openLightbox([{url:m.image,caption:m.title}],0)" style="cursor:pointer"><MediaThumb :url="m.image"/></div>
@@ -457,22 +442,27 @@ const Timeline={ setup(){
 /* ---------- GALLERY ---------- */
 const Gallery={ setup(){
   const albums=computed(()=>state.db.albums);
-  const album=computed(()=>state.db.albums.find(a=>a.id===route.params.id));
-  onMounted(observeReveals); watch(()=>route.params.id,()=>observeReveals());
-  return {albums,album,route,go,fmtDate,openLightbox};
+  const album=computed(()=>state.db.albums.find(a=>sameId(a.id,route.params.id)));
+  const loading=ref(!!route.params.id&&albumNeedsLoad(album.value));
+  const error=ref('');
+  async function loadDetail(){const id=route.params.id;error.value='';if(!id||!albumNeedsLoad(album.value)){loading.value=false;return;}loading.value=true;try{await ensureAlbumLoaded(id);}catch(e){error.value=e.message||'相册加载失败';}finally{loading.value=false;observeReveals();}}
+  onMounted(()=>{loadDetail();observeReveals();});watch([()=>route.params.id,()=>album.value&&album.value.photosLoaded],()=>{loadDetail();observeReveals();});
+  return {albums,album,route,go,fmtDate,openLightbox,albumPhotoCount,loading,error,loadDetail};
 }, template:`
 <section class="section container">
-  <template v-if="!album">
+  <template v-if="!route.params.id">
     <h2 class="section-title">📷 照片画廊</h2>
     <p class="section-sub">共 {{albums.length}} 本相册</p>
     <div class="grid alb-grid">
       <div class="alb reveal" v-for="a in albums" :key="a.id" @click="go('gallery',{id:a.id})">
         <MediaThumb :url="a.cover"/>
-        <div class="ov"><h4>{{a.name}}</h4><span>{{fmtDate(a.date)}} · {{a.photos.length}} 张</span></div>
+        <div class="ov"><h4>{{a.name}}</h4><span>{{fmtDate(a.date)}} · {{albumPhotoCount(a)}} 张</span></div>
       </div>
     </div>
   </template>
-  <template v-else>
+  <div v-else-if="loading" class="card" style="padding:34px;text-align:center;color:var(--c-muted)">正在加载相册照片…</div>
+  <div v-else-if="error" class="card" style="padding:34px;text-align:center"><p style="color:#c53d52;margin-bottom:14px">{{error}}</p><button class="btn" @click="loadDetail">重新加载</button></div>
+  <template v-else-if="album">
     <button class="btn ghost sm" @click="go('gallery')">← 返回相册</button>
     <h2 class="section-title" style="margin-top:16px">{{album.name}}</h2>
     <p class="section-sub">{{album.desc}} · {{fmtDate(album.date)}}</p>
@@ -480,6 +470,7 @@ const Gallery={ setup(){
       <div class="p reveal" v-for="(p,i) in album.photos" :key="p.id" :data-date="p.takenAt?fmtDate(p.takenAt):null" @click="openLightbox(album.photos,i,true)"><MediaThumb :url="p.url"/></div>
     </div>
   </template>
+  <div v-else class="card" style="padding:34px;text-align:center;color:var(--c-muted)">相册不存在或已被删除</div>
 </section>` };
 const WHO={
  girl:{M:[0,1,2,3,4,6,9,12,15,18,21,24],
@@ -500,7 +491,7 @@ const Growth={ setup(){
       tooltip:{trigger:'axis'},
       legend:{data:['身高 (cm)','体重 (kg)'],bottom:0},
       grid:{left:52,right:52,top:30,bottom:46},
-      xAxis:{type:'category',boundaryGap:false,data:r.map(x=>ageText(b.birthday,new Date(x.date))||'出生'),axisLabel:{color:'#8f8ba0'}},
+      xAxis:{type:'category',boundaryGap:false,data:r.map(x=>ageText(b.birthday,x.date)||'出生'),axisLabel:{color:'#8f8ba0'}},
       yAxis:[{type:'value',name:'cm',scale:true,axisLabel:{color:'#8f8ba0'},splitLine:{lineStyle:{color:'#f0e3dd'}}},
              {type:'value',name:'kg',scale:true,axisLabel:{color:'#8f8ba0'},splitLine:{show:false}}],
       series:[
@@ -513,7 +504,7 @@ const Growth={ setup(){
     });
   }
   const metric=ref('height'); const pel=ref(null); let chart2;
-  function monthsAt(d){const b=new Date(state.db.baby.birthday);const x=new Date(d);if(isNaN(b)||isNaN(x))return 0;return (x-b)/(30.44*86400000);}
+  function monthsAt(value){const birth=iso(state.db.baby.birthday),current=iso(value);return birth&&current?calendarDaysBetween(birth,current)/30.44:0;}
   function renderPct(){
     if(!pel.value)return; if(!chart2)chart2=echarts.init(pel.value);
     const t=state.db.settings.theme; const sex=state.db.baby.gender==='boy'?'boy':'girl'; const w=WHO[sex]; const m=metric.value;
@@ -554,7 +545,7 @@ const Growth={ setup(){
   <div class="card reveal" style="padding:8px 4px;overflow:auto">
     <table class="tbl"><thead><tr><th>日期</th><th>月龄</th><th>身高 (cm)</th><th>体重 (kg)</th><th>头围 (cm)</th></tr></thead>
     <tbody><tr v-for="x in rows.slice().reverse()" :key="x.id">
-      <td>{{fmtDate(x.date)}}</td><td>{{ageText(state.db.baby.birthday,new Date(x.date))||'出生'}}</td>
+      <td>{{fmtDate(x.date)}}</td><td>{{ageText(state.db.baby.birthday,x.date)||'出生'}}</td>
       <td>{{x.height}}</td><td>{{x.weight}}</td><td>{{x.head}}</td></tr></tbody></table>
   </div>
 </section>` };
@@ -564,7 +555,7 @@ const Daily={ setup(){
   const tick=ref(0); let t; onMounted(()=>{t=setInterval(()=>tick.value++,30000);observeReveals();}); onUnmounted(()=>clearInterval(t));
   const s=computed(()=>dailyStats());
   const sinceLast=computed(()=>{tick.value;return s.value.lastFeed?since(s.value.lastFeed.time):'—';});
-  const feedTime=t2=>{const d=new Date(t2);return pad(d.getHours())+':'+pad(d.getMinutes());};
+  const feedTime=value=>formatBusinessTime(value,businessClock.timeZone);
   return {s,sinceLast,feedTime,fmtMD,state};
 }, template:`
 <section class="section container">
@@ -596,19 +587,21 @@ const Daily={ setup(){
       <small>{{l.note||'—'}}</small></div>
       <span style="color:var(--c-muted)">{{feedTime(l.time)}}</span>
     </div>
-    <p v-if="!s.today.length" style="color:var(--c-muted);text-align:center;padding:20px">今天还没有记录，去后台或用 AI 助手添加一条吧～</p>
+    <p v-if="!s.today.length" style="color:var(--c-muted);text-align:center;padding:20px">今天还没有记录，去管理页或用 AI 助手添加一条吧～</p>
   </div>
 </section>` };
 
 /* ---------- DIARY ---------- */
 const Diary={ setup(){
-  const list=computed(()=>state.db.diary.slice().sort((a,b)=>new Date(b.date)-new Date(a.date)));
-  const entry=computed(()=>state.db.diary.find(d=>d.id===route.params.id));
-  onMounted(observeReveals); watch(()=>route.params.id,()=>observeReveals());
-  return {list,entry,route,go,fmtDate,openLightbox};
+  const list=computed(()=>state.db.diary.slice().sort((a,b)=>compareDateValues(b.date,a.date,businessClock.timeZone)));
+  const entry=computed(()=>state.db.diary.find(d=>sameId(d.id,route.params.id)));
+  const loading=ref(!!route.params.id&&diaryNeedsLoad(entry.value));const error=ref('');
+  async function loadDetail(){const id=route.params.id;error.value='';if(!id||!diaryNeedsLoad(entry.value)){loading.value=false;return;}loading.value=true;try{await ensureDiaryLoaded(id);}catch(e){error.value=e.message||'日记加载失败';}finally{loading.value=false;observeReveals();}}
+  onMounted(()=>{loadDetail();observeReveals();});watch([()=>route.params.id,()=>entry.value&&entry.value.detailLoaded],()=>{loadDetail();observeReveals();});
+  return {list,entry,route,go,fmtDate,openLightbox,loading,error,loadDetail};
 }, template:`
 <section class="section container">
-  <template v-if="!entry">
+  <template v-if="!route.params.id">
     <h2 class="section-title">📖 成长日记</h2>
     <p class="section-sub">写给未来的你</p>
     <div class="grid diary-grid">
@@ -618,17 +611,20 @@ const Diary={ setup(){
       </div>
     </div>
   </template>
-  <template v-else>
+  <div v-else-if="loading" class="card" style="padding:34px;text-align:center;color:var(--c-muted)">正在加载完整日记…</div>
+  <div v-else-if="error" class="card" style="padding:34px;text-align:center"><p style="color:#c53d52;margin-bottom:14px">{{error}}</p><button class="btn" @click="loadDetail">重新加载</button></div>
+  <template v-else-if="entry">
     <button class="btn ghost sm" @click="go('diary')">← 返回日记</button>
     <article class="card reveal" style="padding:34px;max-width:760px;margin:18px auto 0">
       <div class="dt" style="color:var(--c-secondary-d);font-weight:700">{{fmtDate(entry.date)}}</div>
       <h2 style="margin:6px 0 18px">{{entry.title}}</h2>
       <p style="white-space:pre-wrap;color:#5b5870;line-height:1.9">{{entry.content}}</p>
       <div class="grid" style="grid-template-columns:repeat(2,1fr);margin-top:20px" v-if="entry.images&&entry.images.length">
-        <div v-for="(im,i) in entry.images" :key="i" @click="openLightbox(entry.images.map(u=>({url:u,caption:entry.title})),i)" style="position:relative;aspect-ratio:16/10;border-radius:14px;overflow:hidden;cursor:pointer;background:#f3e7e2"><video v-if="isVideo(im)" class="mediafill" :src="im" muted playsinline preload="metadata"></video><img v-else :src="im" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover"/><span v-if="isVideo(im)" class="playbadge">▶</span></div>
+        <div v-for="(im,i) in entry.images" :key="i" @click="openLightbox(entry.images.map(u=>({url:u,caption:entry.title})),i)" style="position:relative;aspect-ratio:16/10;border-radius:14px;overflow:hidden;cursor:pointer;background:#f3e7e2"><MediaThumb :url="im"/></div>
       </div>
     </article>
   </template>
+  <div v-else class="card" style="padding:34px;text-align:center;color:var(--c-muted)">日记不存在或已被删除</div>
 </section>` };
 
 /* ---------- MESSAGES ---------- */
@@ -682,11 +678,21 @@ const About={ setup(){ onMounted(observeReveals); return {state,ageText,fmtDate,
 /* ---------- VIDEOS ---------- */
 const Videos={ setup(){
   const list=computed(()=>state.db.videos||[]);
-  const cur=computed(()=>list.value.find(v=>String(v.id)===String(route.params.id)));
+  const cur=computed(()=>list.value.find(v=>sameId(v.id,route.params.id)));
   const vedit=ref(false);
-  async function saveVideo(){try{await saveVideoEdit(cur.value);}catch(e){alert(e.message);}vedit.value=false;}
-  onMounted(observeReveals); watch(()=>route.params.id,()=>{vedit.value=false;observeReveals();});
-  return {list,cur,route,go,fmtDate,vedit,saveVideo,state};
+  const draft=ref(null);
+  const saving=ref(false);
+  function startEdit(){draft.value=cloneData(cur.value);vedit.value=true;}
+  function cancelEdit(){draft.value=null;vedit.value=false;}
+  async function saveVideo(){
+    if(!draft.value||saving.value)return;
+    saving.value=true;
+    try{const saved=await saveVideoEdit(draft.value);if(saved&&cur.value)Object.assign(cur.value,saved);cancelEdit();}
+    catch(e){alert(e.message);}
+    finally{saving.value=false;}
+  }
+  onMounted(observeReveals); watch(()=>route.params.id,()=>{cancelEdit();observeReveals();});
+  return {list,cur,route,go,fmtDate,vedit,draft,saving,startEdit,cancelEdit,saveVideo,state};
 }, template:`
 <section class="section container">
   <template v-if="!cur">
@@ -698,7 +704,7 @@ const Videos={ setup(){
         <div class="bd"><div class="dt">{{fmtDate(v.date)}}</div><h4>{{v.title}}</h4><p>{{v.desc}}</p></div>
       </div>
     </div>
-    <p v-if="!list.length" style="color:var(--c-muted);text-align:center;padding:30px">还没有视频，去后台上传第一个吧～</p>
+    <p v-if="!list.length" style="color:var(--c-muted);text-align:center;padding:30px">还没有视频，去管理页上传第一个吧～</p>
   </template>
   <template v-else>
     <button class="btn ghost sm" @click="go('videos')">← 返回视频</button>
@@ -707,13 +713,13 @@ const Videos={ setup(){
       <div style="padding:10px 4px 0">
         <div class="dt" style="color:var(--c-secondary-d);font-weight:700">{{fmtDate(cur.date)}}</div>
         <template v-if="vedit">
-          <input v-model="cur.title" placeholder="标题" style="font-size:1.15rem;font-weight:700;width:100%;padding:9px 11px;border:1.5px solid var(--c-line);border-radius:10px;margin:6px 0"/>
-          <textarea v-model="cur.desc" placeholder="描述" rows="3" style="width:100%;padding:9px 11px;border:1.5px solid var(--c-line);border-radius:10px"></textarea>
-          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px"><button class="btn gray sm" @click="vedit=false">取消</button><button class="btn sm" @click="saveVideo">保存</button></div>
+          <input v-model="draft.title" placeholder="标题" style="font-size:1.15rem;font-weight:700;width:100%;padding:9px 11px;border:1.5px solid var(--c-line);border-radius:10px;margin:6px 0"/>
+          <textarea v-model="draft.desc" placeholder="描述" rows="3" style="width:100%;padding:9px 11px;border:1.5px solid var(--c-line);border-radius:10px"></textarea>
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px"><button class="btn gray sm" :disabled="saving" @click="cancelEdit">取消</button><button class="btn sm" :disabled="saving" @click="saveVideo">{{saving?'保存中…':'保存'}}</button></div>
         </template>
         <template v-else>
           <h2 style="margin:4px 0 8px">{{cur.title}}</h2><p style="color:#5b5870;white-space:pre-wrap">{{cur.desc}}</p>
-          <button v-if="state.session.loggedIn" class="btn ghost sm" @click="vedit=true">✏️ 编辑标题/描述</button>
+          <button v-if="state.session.loggedIn" class="btn ghost sm" @click="startEdit">✏️ 编辑标题/描述</button>
         </template>
       </div>
     </div>
@@ -729,7 +735,7 @@ const Videos={ setup(){
 const Profile={ setup(){
   const f=reactive({old:'',n1:'',n2:''}); const msg=ref(''); const ok=ref(false); const busy=ref(false);
   const uname=computed(()=>state.session.username); const role=computed(()=>state.session.role);
-  async function submit(){msg.value='';if(f.n1.length<4){ok.value=false;msg.value='新密码至少 4 位';return;}if(f.n1!==f.n2){ok.value=false;msg.value='两次输入的新密码不一致';return;}busy.value=true;try{await API.post('/auth/change-password',{oldPassword:f.old,newPassword:f.n1});ok.value=true;msg.value='✅ 密码已更新';f.old=f.n1=f.n2='';}catch(e){ok.value=false;msg.value=e.message||'修改失败';}busy.value=false;}
+  async function submit(){msg.value='';if(f.n1.length<8){ok.value=false;msg.value='新密码至少 8 位';return;}if(f.n1!==f.n2){ok.value=false;msg.value='两次输入的新密码不一致';return;}busy.value=true;try{await API.post('/auth/change-password',{oldPassword:f.old,newPassword:f.n1});ok.value=true;msg.value='✅ 密码已更新，其他设备的旧会话已退出';f.old=f.n1=f.n2='';}catch(e){ok.value=false;msg.value=e.message||'修改失败';}busy.value=false;}
   onMounted(observeReveals);
   return {f,msg,ok,busy,uname,role,submit};
 }, template:`
@@ -743,7 +749,7 @@ const Profile={ setup(){
     <hr style="border:none;border-top:1px dashed var(--c-line);margin:0 0 18px"/>
     <h4 style="margin-bottom:12px">🔒 修改密码</h4>
     <div class="field"><label>当前密码</label><input type="password" v-model="f.old" @keyup.enter="submit"/></div>
-    <div class="field"><label>新密码（至少 4 位）</label><input type="password" v-model="f.n1" @keyup.enter="submit"/></div>
+    <div class="field"><label>新密码（至少 8 位）</label><input type="password" v-model="f.n1" @keyup.enter="submit"/></div>
     <div class="field"><label>确认新密码</label><input type="password" v-model="f.n2" @keyup.enter="submit"/></div>
     <p v-if="msg" :style="{color: ok?'#2f855a':'#e0576a',margin:'0 0 12px'}">{{msg}}</p>
     <button class="btn" :disabled="busy" @click="submit">保存新密码</button>
@@ -789,20 +795,18 @@ const Vaccine={ setup(){
       <div class="grow"><b>{{v.name}} <span style="color:var(--c-muted);font-weight:400;font-size:.85rem">第{{v.dose}}剂</span></b><small>建议 {{vxMonLabel(v.plannedMonth)}}<template v-if="v.date"> · 已于 {{fmtDate(v.date)}} 接种</template><template v-else-if="vxInfo(v).due"> · 应于 {{fmtDate(vxInfo(v).due)}}</template></small></div>
       <span class="pill" :class="vxInfo(v).cls">{{vxInfo(v).label}}</span>
     </div>
-    <p v-if="!list.length" style="color:var(--c-muted);text-align:center;padding:30px">还没有疫苗计划，管理员可在后台「疫苗管理」载入标准免疫程序。</p>
+    <p v-if="!list.length" style="color:var(--c-muted);text-align:center;padding:30px">还没有疫苗计划，管理员可在管理端「疫苗管理」载入标准免疫程序。</p>
   </div>
 </section>` };
 
 /* ---------- admin helpers ---------- */
-const IMG_EXT=['jpg','jpeg','png','gif','webp','bmp','svg','avif','heic'];
+const IMG_EXT=['jpg','jpeg','png','gif','webp','avif','heic'];
 const VID_EXT=['mp4','webm','ogg','ogv','mov','m4v','mkv'];
 const UPLOAD_LIMITS_DEFAULT={imageMB:10,videoMB:200};
-function fileKind(f){const ext=(f.name.split('.').pop()||'').toLowerCase();const ct=(f.type||'').toLowerCase();if(IMG_EXT.includes(ext)||ct.startsWith('image/'))return 'image';if(VID_EXT.includes(ext)||ct.startsWith('video/'))return 'video';return null;}
-function checkFile(f){const lim=(state.db&&state.db.limits)||UPLOAD_LIMITS_DEFAULT;const k=fileKind(f);if(!k)return{ok:false,msg:'不支持的文件类型：'+f.name+'（仅支持图片和视频）'};const mb=k==='image'?(lim.imageMB||10):(lim.videoMB||200);if(f.size>mb*1024*1024)return{ok:false,msg:'文件过大：'+f.name+'（'+(k==='image'?'图片':'视频')+'上限 '+mb+'MB，当前 '+(f.size/1048576).toFixed(1)+'MB）'};return{ok:true};}
 // 客户端图片压缩：上传前把大图缩到 2048px、JPEG 85% 质量。iPhone 5MB 原图 → ~350KB，
 // 上传耗时缩短一个数量级，是手机端能稳定上传的关键。压缩失败或无益则用原文件。
 async function shrinkImage(file, maxDim=2048, quality=0.85){
-  if(!file||!file.type||!file.type.startsWith('image/')) return file;
+  if(!file||detectFileKind(file,IMG_EXT,VID_EXT)!=='image') return file;
   if(file.type==='image/svg+xml'||file.type==='image/gif') return file;   // 保留矢量/动图原样
   if(file.size < 512*1024) return file;                                    // <512KB 不折腾
   let bmp=null;
@@ -817,24 +821,7 @@ async function shrinkImage(file, maxDim=2048, quality=0.85){
   if(!blob||blob.size>=file.size) return file;                             // 压完反而更大就跳过
   const newName = (file.name||'image').replace(/\.[^.]+$/,'')+'.jpg';
   const out = new File([blob], newName, {type:'image/jpeg', lastModified: file.lastModified||Date.now()});
-  try{ console.log('[shrink]', file.name, '->', newName, Math.round(file.size/1024)+'KB ->', Math.round(out.size/1024)+'KB'); }catch(e){}
   return out;
-}
-function makeUploadId(){const b=new Uint8Array(16);crypto.getRandomValues(b);return Array.from(b,x=>x.toString(16).padStart(2,'0')).join('');}
-// 并发池：对 items 逐个跑 worker，最多 limit 个同时进行；任一抛错即停止派发新任务并向上抛
-async function runPool(items, limit, worker){
-  let next=0, failed=null;
-  async function run(){
-    while(next<items.length){
-      if(failed) return;
-      const i=next++;
-      try{ await worker(items[i], i); }
-      catch(e){ failed=failed||e; return; }
-    }
-  }
-  const n=Math.max(1, Math.min(limit, items.length));
-  await Promise.all(Array.from({length:n}, run));
-  if(failed) throw failed;
 }
 // 分片上传：把大文件切成 5MB 块，并发 POST（限 CHUNK_CONCURRENCY 个同时进行），
 // 每片请求短、避开 Cloudflare 100s 单请求上限；合并时后端按 index 排序，故并发顺序无关
@@ -842,7 +829,11 @@ async function xhrUploadChunked(file, onProgress){
   const CHUNK=5*1024*1024;
   const MAX_RETRY=3;                          // 每片最多重试 3 次（合计 4 次尝试）
   const CHUNK_CONCURRENCY=3;
-  const uploadId=makeUploadId();
+  const resumeKey=resumeStorageKey(file);
+  let uploadId=LS.getItem(resumeKey);
+  if(!/^[a-f0-9]{32}$/.test(uploadId||''))uploadId=makeUploadId(crypto);
+  LS.setItem(resumeKey,uploadId);
+  uploadState.uploadId=uploadId;uploadState.resumeKey=resumeKey;
   const total=Math.max(1, Math.ceil(file.size/CHUNK));
   const baseLabel = uploadState.label;         // 保留 pickVideo 设的原始标签
   const frac = new Array(total).fill(0);       // 每片已上传比例，用于并发进度合算
@@ -851,6 +842,55 @@ async function xhrUploadChunked(file, onProgress){
     const sum = frac.reduce((a,b)=>a+b, 0);
     onProgress(Math.min(99, Math.round(sum / total * 100)));
   };
+  const clearResume=()=>{LS.removeItem(resumeKey);uploadState.uploadId='';uploadState.resumeKey='';};
+  async function waitForProcessing(result){
+    let latest=result||{};
+    let item=((latest.items||[])[0])||{};
+    let processingState=item.processingState||'';
+    if(processingState!=='pending'&&processingState!=='processing'){
+      clearResume();onProgress&&onProgress(100);return latest;
+    }
+    uploadState.cancellable=false;uploadState.pct=99;uploadState.label=file.name+' (视频处理中)';
+    const query='?filename='+encodeURIComponent(file.name)+'&fileSize='+encodeURIComponent(file.size)+'&total='+encodeURIComponent(total);
+    for(let attempt=0;attempt<600;attempt++){
+      await new Promise(r=>setTimeout(r,1000));
+      try{
+        const status=await API.get('/upload/status/'+encodeURIComponent(uploadId)+query);
+        if(status&&status.result)latest=status.result;
+      }catch(err){
+        if(err&&err.status===401)throw err;
+        if(err&&err.status===403)throw err;
+        continue;
+      }
+      item=((latest.items||[])[0])||{};processingState=item.processingState||'';
+      if(processingState==='ready'||processingState==='failed'){
+        clearResume();onProgress&&onProgress(100);
+        if(item.processingWarning)notify(item.processingWarning,processingState==='failed'?'error':'info',6000);
+        return latest;
+      }
+    }
+    notify('视频仍在后台处理中，已保留原视频地址，可稍后重新选择同一文件查询结果','info',8000);
+    return latest;
+  }
+  let received=new Set();
+  try{
+    const query='?filename='+encodeURIComponent(file.name)+'&fileSize='+encodeURIComponent(file.size)+'&total='+encodeURIComponent(total);
+    const status=await API.get('/upload/status/'+encodeURIComponent(uploadId)+query);
+    if(status&&status.state==='completed'&&status.result){
+      return await waitForProcessing(status.result);
+    }
+    received=new Set((status&&status.received)||[]);
+    received.forEach(index=>{if(index>=0&&index<total)frac[index]=1;});
+    if(received.size){uploadState.label=file.name+' (继续上传)';reportProgress();}
+  }catch(err){
+    if(err&&err.status===401)throw err;
+    if(err&&err.status===403)throw err;
+    if(uploadState.cancelled)throw _cancelErr();
+    if((err&&err.status===404)||(err&&err.status===409)){
+      uploadId=makeUploadId(crypto);LS.setItem(resumeKey,uploadId);uploadState.uploadId=uploadId;
+    }
+  }
+  if(uploadState.cancelled)throw _cancelErr();
 
   function sendChunk(i){
     const start=i*CHUNK, end=Math.min(start+CHUNK,file.size);
@@ -862,6 +902,8 @@ async function xhrUploadChunked(file, onProgress){
       fd.append('uploadId', uploadId);
       fd.append('index', String(i));
       fd.append('total', String(total));
+      fd.append('filename', file.name);
+      fd.append('fileSize', String(file.size));
       const xhr=new XMLHttpRequest();
       uploadState._xhrs.add(xhr);
       const done=()=>uploadState._xhrs.delete(xhr);
@@ -901,7 +943,6 @@ async function xhrUploadChunked(file, onProgress){
       if(uploadState.cancelled){ throw _cancelErr(); }
       if(attempt > 0){
         const delay = 1000 * Math.pow(2, attempt-1);   // 1s / 2s / 4s
-        console.warn('分片 '+(chunkIdx+1)+' 第'+attempt+'次重试, '+delay+'ms 后重发...');
         await new Promise(r=>setTimeout(r, delay));
         if(uploadState.cancelled){ throw _cancelErr(); }
       }
@@ -916,24 +957,24 @@ async function xhrUploadChunked(file, onProgress){
     throw lastErr;
   }
 
-  const idxs = Array.from({length:total}, (_,i)=>i);
+  const idxs = Array.from({length:total}, (_,i)=>i).filter(index=>!received.has(index));
   await runPool(idxs, CHUNK_CONCURRENCY, i => withRetry(()=>sendChunk(i), i));
 
   onProgress && onProgress(99);
+  uploadState.cancellable=false;
+  uploadState.label=file.name+' (合并校验中)';
   // /complete 也重试；只有明确的业务错误（缺片/不支持/过大/权限）才是致命
   let completeErr = null;
   for(let attempt=0; attempt<=MAX_RETRY; attempt++){
     if(attempt > 0){
       const delay = 1000 * Math.pow(2, attempt-1);
-      console.warn('合并请求第'+attempt+'次重试, '+delay+'ms 后重发...');
       uploadState.label = file.name+' (合并重试 '+attempt+'/'+MAX_RETRY+'...)';
       await new Promise(r=>setTimeout(r, delay));
     }
     try{
-      const r = await API.post('/upload/complete', { uploadId, total, filename: file.name });
+      const r = await API.post('/upload/complete', { uploadId, total, filename: file.name, fileSize: file.size });
       uploadState.label = baseLabel;
-      onProgress && onProgress(100);
-      return r;
+      return await waitForProcessing(r);
     }catch(err){
       completeErr = err;
       const m = err.message || '';
@@ -945,23 +986,23 @@ async function xhrUploadChunked(file, onProgress){
   throw completeErr;
 }
 function xhrUpload(files,onProgress){return new Promise((resolve,reject)=>{if(uploadState.cancelled){reject(_cancelErr());return;}const fd=new FormData();[...files].forEach(f=>fd.append('files',f));const xhr=new XMLHttpRequest();uploadState._xhrs.add(xhr);const done=()=>uploadState._xhrs.delete(xhr);xhr.open('POST','/api/upload');if(API.token)xhr.setRequestHeader('Authorization','Bearer '+API.token);xhr.upload.onprogress=e=>{if(e.lengthComputable&&onProgress)onProgress(Math.round(e.loaded/e.total*100));};xhr.onabort=()=>{done();reject(_cancelErr());};xhr.onload=()=>{done();if(uploadState.cancelled){reject(_cancelErr());return;}if(xhr.status>=200&&xhr.status<300){try{resolve(JSON.parse(xhr.responseText));}catch(e){resolve({});}}else{let d=null;try{d=JSON.parse(xhr.responseText);}catch(e){}console.error('上传失败',xhr.status,xhr.responseText);if(xhr.status===401){API.setToken('');reject(new Error('登录已过期，请刷新页面重新登录'));return;}if(xhr.status===403){reject(new Error('没有上传权限（需要管理员账号）'));return;}if(xhr.status===413){reject(new Error((d&&d.detail)||'文件太大，被服务器/反向代理拒绝（请检查 Nginx/Caddy 的 client_max_body_size 或 request_body max_size 配置）'));return;}reject(new Error((d&&d.detail)||('上传失败 '+xhr.status+(xhr.responseText?'：'+xhr.responseText.slice(0,200):''))));}};xhr.onerror=()=>{done();if(uploadState.cancelled){reject(_cancelErr());return;}console.error('xhrUpload network error',xhr);reject(new Error('网络错误（服务器可能未启动或无法访问）'));};xhr.send(fd);});}
-function pickFile(cb){const i=document.createElement('input');i.type='file';i.accept='image/*,video/*';i.onchange=async e=>{let f=e.target.files[0];if(!f)return;f=await shrinkImage(f);const v=checkFile(f);if(!v.ok){alert(v.msg);return;}uploadState.cancelled=false;uploadState.active=true;uploadState.pct=0;uploadState.label=f.name;uploadState.index=1;uploadState.total=1;let r=null;try{r=await xhrUpload([f],p=>uploadState.pct=p);}catch(err){uploadState.active=false;if(err.cancelled){return;}console.error('pickFile upload failed',err);alert('上传失败：'+err.message);return;}uploadState.active=false;try{cb(r.url);}catch(err){console.error('pickFile callback failed',err);alert('上传成功但处理失败：'+err.message);}};i.click();}
+function pickFile(cb){const i=document.createElement('input');i.type='file';i.accept='image/*,video/*';i.onchange=async e=>{let f=e.target.files[0];if(!f)return;f=await shrinkImage(f);const kind=detectFileKind(f,IMG_EXT,VID_EXT);const v=validateUploadFile(f,state.db&&state.db.limits,UPLOAD_LIMITS_DEFAULT,IMG_EXT,VID_EXT);if(!v.ok){alert(v.msg);return;}uploadState.cancelled=false;uploadState.cancellable=true;uploadState.active=true;uploadState.pct=0;uploadState.label=f.name;uploadState.index=1;uploadState.total=1;let r=null;try{r=kind==='video'?await xhrUploadChunked(f,p=>uploadState.pct=p):await xhrUpload([f],p=>uploadState.pct=p);}catch(err){uploadState.active=false;if(err.cancelled){return;}console.error('pickFile upload failed',err);alert('上传失败：'+err.message);return;}uploadState.active=false;try{cb(r.url);}catch(err){console.error('pickFile callback failed',err);alert('上传成功但处理失败：'+err.message);}};i.click();}
 function pickFiles(cb){const i=document.createElement('input');i.type='file';i.accept='image/*,video/*';i.multiple=true;i.onchange=async e=>{
   const raw=[...e.target.files];if(!raw.length)return;
-  // 并发上传（限 IMG_CONCURRENCY 个同时进行）：每个文件独立短请求，避开反代 100s 单请求超时；
-  // 每张先客户端压缩再上传；结果按原索引暂存，全部结束后再按序回调，保证相册/日记里的顺序不乱
-  const IMG_CONCURRENCY=4;
-  uploadState.cancelled=false;uploadState.active=true;uploadState.total=raw.length;uploadState.index=0;uploadState.pct=0;
+  // 纯图片批量保持 4 并发；包含视频时改为串行并统一走分片与兼容处理，避免共享状态互相覆盖。
+  // 图片先客户端压缩；结果按原索引暂存，全部结束后再按序回调，保证相册/日记里的顺序不乱
+  const MEDIA_CONCURRENCY=raw.some(file=>detectFileKind(file,IMG_EXT,VID_EXT)==='video')?1:4;
+  uploadState.cancelled=false;uploadState.cancellable=true;uploadState.active=true;uploadState.total=raw.length;uploadState.index=0;uploadState.pct=0;
   const failed=[];const results=new Array(raw.length).fill(null);let doneCount=0;let cancelled=false;
   try{
-    await runPool(raw, IMG_CONCURRENCY, async (file, idx)=>{
+    await runPool(raw, MEDIA_CONCURRENCY, async (file, idx)=>{
       if(uploadState.cancelled){ cancelled=true; throw _cancelErr(); }
       let f=file; uploadState.label=f.name;
       try{ f=await shrinkImage(f); }catch(e){/* 压缩失败就用原图 */}
       if(uploadState.cancelled){ cancelled=true; throw _cancelErr(); }
-      const v=checkFile(f); if(!v.ok){ failed.push(f.name+'（'+v.msg+'）'); return; }
+      const kind=detectFileKind(f,IMG_EXT,VID_EXT);const v=validateUploadFile(f,state.db&&state.db.limits,UPLOAD_LIMITS_DEFAULT,IMG_EXT,VID_EXT); if(!v.ok){ failed.push(f.name+'（'+v.msg+'）'); return; }
       let r=null;
-      try{ r=await xhrUpload([f]); }
+      try{uploadState.cancellable=true;r=kind==='video'?await xhrUploadChunked(f,p=>uploadState.pct=p):await xhrUpload([f]);}
       catch(err){ if(err.cancelled){ cancelled=true; throw err; } console.error('pickFiles item failed',f.name,err); failed.push(f.name+'（'+err.message+'）'); return; }
       results[idx]=r.url;
       doneCount++; uploadState.index=doneCount; uploadState.pct=Math.round(doneCount/raw.length*100);
@@ -990,6 +1031,7 @@ const Admin={ components:{}, setup(){
       <a v-for="t in ADMIN_TABS" :key="t[0]" :class="{active:adminTab===t[0]}" @click="adminTab=t[0]">
         <span>{{t[2]}}</span>{{t[1]}}<span v-if="t[0]==='messages'&&pending" class="pill pend" style="margin-left:auto">{{pending}}</span></a>
       <a @click="go('home')" style="margin-top:8px">🏠 查看前台</a>
+      <a @click="go('profile')">👤 个人资料</a>
       <a @click="logout" style="color:#e0576a">🚪 退出登录</a>
     </aside>
     <div class="admin-main"><component :is="comp"></component></div>
@@ -999,14 +1041,14 @@ const Admin={ components:{}, setup(){
 /* ---------- ADMIN: overview ---------- */
 const AdOverview={ setup(){
   const s=state.db, g=computed(()=>latestGrowth()), st=computed(()=>dailyStats());
-  return {s,g,st,adminTab,ageText,daysOld};
+  return {s,g,st,adminTab,ageText,daysOld,albumPhotoCount};
 }, template:`
 <div>
   <div class="admin-head"><h2>📊 概览</h2></div>
   <div class="stat-row" style="grid-template-columns:repeat(4,1fr)">
     <div class="card stat"><b>{{ageText(s.baby.birthday)}}</b><span>{{s.baby.name}} · 第{{daysOld(s.baby.birthday)}}天</span></div>
     <div class="card stat"><b>{{s.milestones.length}}</b><span>里程碑</span></div>
-    <div class="card stat"><b>{{s.albums.reduce((a,b)=>a+b.photos.length,0)}}</b><span>照片</span></div>
+    <div class="card stat"><b>{{s.albums.reduce((total,album)=>total+albumPhotoCount(album),0)}}</b><span>照片</span></div>
     <div class="card stat"><b>{{st.totalMl}}<small>ml</small></b><span>今日奶量</span></div>
   </div>
   <div class="card" style="padding:24px;margin-top:8px">
@@ -1043,7 +1085,7 @@ const AdBaby={ setup(){ const b=state.db.baby; async function save(){try{await A
 
 /* ---------- ADMIN: milestones ---------- */
 const AdMilestones={ setup(){
-  const list=computed(()=>state.db.milestones.slice().sort((a,b)=>new Date(b.date)-new Date(a.date)));
+  const list=computed(()=>state.db.milestones.slice().sort((a,b)=>compareDateValues(b.date,a.date,businessClock.timeZone)));
   const editing=ref(null);
   const blank=()=>({id:'',date:todayStr(),title:'',category:'成长',desc:'',image:''});
   function open(m){editing.value=m?JSON.parse(JSON.stringify(m)):blank();}
@@ -1075,14 +1117,15 @@ const AdMilestones={ setup(){
 
 /* ---------- ADMIN: albums ---------- */
 const AdAlbums={ setup(){
-  const albums=computed(()=>state.db.albums);
-  const editing=ref(null); const cur=ref(null);
+  const pager=makeAdminHistoryPager('albums');
+  const albums=computed(()=>pager.items);
+  const editing=ref(null);const editingLoading=ref(false);
   const blank=()=>({id:'',name:'',date:todayStr(),desc:'',cover:'',photos:[]});
-  function open(a){editing.value=a?JSON.parse(JSON.stringify(a)):blank();}
+  async function open(a){if(!a){editing.value=blank();return;}editingLoading.value=true;try{const detail=await ensureAlbumLoaded(a.id);editing.value=cloneData(detail);}catch(err){alert(err.message||'相册详情加载失败');}finally{editingLoading.value=false;}}
   async function save(){const e=editing.value;if(!e.name){alert('请填写相册名');return;}
     if(!e.cover&&e.photos[0])e.cover=e.photos[0].url;
-    try{ if(e.id)await apiUpdate('albums',e.id,e); else await apiCreate('albums',e); editing.value=null; }catch(err){alert(err.message);} }
-  async function del(a){if(await confirmDialog('删除相册「'+a.name+'」？')){try{await apiDelete('albums',a.id);}catch(err){alert(err.message);}}}
+    try{if(e.id)await apiUpdate('albums',e.id,e);else await apiCreate('albums',e);}catch(err){alert(err.message);return;}editing.value=null;try{await pager.refreshAfterMutation();}catch(err){} }
+  async function del(a){if(await confirmDialog('删除相册「'+a.name+'」？')){try{await apiDelete('albums',a.id);await pager.refreshAfterMutation();}catch(err){alert(err.message);}}}
   function addPhotos(){const t=editing.value;if(!t)return;pickFiles(u=>{if(editing.value!==t)return;if(!Array.isArray(t.photos))t.photos=[];t.photos.push({id:uid(),url:u,caption:'',takenAt:t.date||''});});}
   function addByUrl(){const t=editing.value;if(!t)return;const u=prompt('输入图片URL');if(!u||editing.value!==t)return;if(!Array.isArray(t.photos))t.photos=[];t.photos.push({id:uid(),url:u,caption:'',takenAt:t.date||''});}
   function pickCover(){const t=editing.value;if(!t)return;pickFile(u=>{if(editing.value===t)t.cover=u;});}
@@ -1094,15 +1137,20 @@ const AdAlbums={ setup(){
   async function makeShare(){try{const sh=await API.post('/albums/'+shareA.value.id+'/share',{days:shareDays.value||null});shareUrl.value=shareLink(sh.token);shareExp.value=shareText(sh.expiresAt);}catch(e){alert(e.message);}}
   async function revokeShare(){try{await API.del('/albums/'+shareA.value.id+'/share');shareUrl.value='';shareExp.value='';}catch(e){alert(e.message);}}
   function copyShare(){if(navigator.clipboard)navigator.clipboard.writeText(shareUrl.value);alert('已复制链接');}
-  return {albums,editing,open,save,del,addPhotos,addByUrl,delPhoto,fmtDate,pickCover,shareA,shareDays,shareUrl,shareExp,openShare,makeShare,revokeShare,copyShare};
+  async function load(offset=pager.offset){try{await pager.load(offset);}catch(e){}}
+  onMounted(()=>load(0));
+  return {albums,pager,editing,editingLoading,open,save,del,addPhotos,addByUrl,delPhoto,fmtDate,pickCover,shareA,shareDays,shareUrl,shareExp,openShare,makeShare,revokeShare,copyShare,albumPhotoCount,load};
 }, template:`
 <div>
-  <div class="admin-head"><h2>📷 相册管理</h2><button class="btn" @click="open()">+ 新建相册</button></div>
+  <div class="admin-head"><h2>📷 相册管理</h2><button class="btn" :disabled="pager.loading||editingLoading" @click="open()">+ 新建相册</button></div>
+  <p v-if="pager.loading" class="history-status">正在加载相册记录…</p>
+  <p v-else-if="pager.loadError" class="history-status error">{{pager.loadError}} <button class="btn ghost sm" @click="load()">重试</button></p>
   <div class="list-row" v-for="a in albums" :key="a.id">
     <div class="thumb" :style="{backgroundImage:'url('+a.cover+')'}"></div>
-    <div class="grow"><b>{{a.name}}</b><small>{{fmtDate(a.date)}} · {{a.photos.length}} 张照片</small></div>
-    <button class="btn ghost sm" @click="openShare(a)">🔗 分享</button><button class="btn gray sm" @click="open(a)">编辑</button><button class="btn danger sm" @click="del(a)">删除</button>
+    <div class="grow"><b>{{a.name}}</b><small>{{fmtDate(a.date)}} · {{albumPhotoCount(a)}} 张照片</small></div>
+    <button class="btn ghost sm" :disabled="pager.loading" @click="openShare(a)">🔗 分享</button><button class="btn gray sm" :disabled="pager.loading||editingLoading" @click="open(a)">编辑</button><button class="btn danger sm" :disabled="pager.loading" @click="del(a)">删除</button>
   </div>
+  <HistoryPager :pager="pager"/>
   <div class="modal-bg" v-if="shareA" @click.self="shareA=null"><div class="card modal">
     <h3>🔗 分享「{{shareA.name}}」</h3>
     <p style="color:var(--c-muted)">生成一个免登录的对外链接，家人无需注册即可查看这一本相册。</p>
@@ -1130,9 +1178,6 @@ const AdAlbums={ setup(){
     <div style="display:flex;gap:10px;justify-content:flex-end"><button class="btn gray" @click="editing=null">取消</button><button class="btn" @click="save">保存</button></div>
   </div></div>
 </div>` };
-/* ---------- toggle ---------- */
-const Toggle={props:['modelValue'],emits:['update:modelValue'],template:`<div class="sw" :class="{on:modelValue}" @click="$emit('update:modelValue',!modelValue)"><i></i></div>`};
-
 /* ---------- ADMIN: growth ---------- */
 const AdGrowth={ setup(){
   const rows=computed(()=>sortedGrowth().reverse());
@@ -1160,56 +1205,68 @@ const AdGrowth={ setup(){
 
 /* ---------- ADMIN: daily ---------- */
 const AdDaily={ setup(){
-  const logs=computed(()=>state.db.daily.slice().sort((a,b)=>new Date(b.time)-new Date(a.time)));
+  const pager=makeAdminHistoryPager('daily');
+  const logs=computed(()=>pager.items);
   const st=computed(()=>dailyStats());
   const amt=ref(state.db.settings.feeding.defaultAmount), ftype=ref('formula');
-  const feedTime=t=>{const d=new Date(t);return `${d.getMonth()+1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;};
-  async function feed(){try{await apiCreate('daily',{type:'feeding',feedType:ftype.value,amount:+amt.value||null,time:new Date().toISOString(),note:''});}catch(err){alert(err.message);}}
-  async function diaper(t){try{await apiCreate('daily',{type:'diaper',diaperType:t,time:new Date().toISOString(),note:''});}catch(err){alert(err.message);}}
-  async function del(x){try{await apiDelete('daily',x.id);}catch(err){alert(err.message);}}
-  return {logs,st,amt,ftype,feed,diaper,del,feedTime};
+  const feedTime=value=>formatBusinessDateTime(value,businessClock.timeZone);
+  async function feed(){try{await apiCreate('daily',{type:'feeding',feedType:ftype.value,amount:+amt.value||null,time:businessClock.now().toISOString(),note:''});await pager.refreshAfterMutation();}catch(err){alert(err.message);}}
+  async function diaper(t){try{await apiCreate('daily',{type:'diaper',diaperType:t,time:businessClock.now().toISOString(),note:''});await pager.refreshAfterMutation();}catch(err){alert(err.message);}}
+  async function del(x){try{await apiDelete('daily',x.id);await pager.refreshAfterMutation();}catch(err){alert(err.message);}}
+  async function load(offset=pager.offset){try{await pager.load(offset);}catch(e){}}
+  onMounted(()=>load(0));
+  return {logs,pager,st,amt,ftype,feed,diaper,del,feedTime,load};
 }, template:`
 <div>
   <div class="admin-head"><h2>🍼 日常记录管理</h2></div>
+  <p v-if="pager.loading" class="history-status">正在加载日常记录…</p>
+  <p v-else-if="pager.loadError" class="history-status error">{{pager.loadError}} <button class="btn ghost sm" @click="load()">重试</button></p>
   <div class="card" style="padding:20px;margin-bottom:16px">
     <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
       <label style="font-weight:600">喂奶</label>
       <input type="number" v-model="amt" style="width:90px;padding:9px;border:1.5px solid var(--c-line);border-radius:10px"/> ml
       <select v-model="ftype" style="padding:9px;border:1.5px solid var(--c-line);border-radius:10px"><option value="formula">配方奶</option><option value="breast">母乳</option></select>
-      <button class="btn sm" @click="feed">🍼 记一次喂奶</button>
+      <button class="btn sm" :disabled="pager.loading||!!pager.loadError" @click="feed">🍼 记一次喂奶</button>
       <span style="width:1px;height:26px;background:var(--c-line)"></span>
-      <button class="btn ghost sm" @click="diaper('pee')">💧 小便</button>
-      <button class="btn ghost sm" @click="diaper('poop')">💩 大便</button>
+      <button class="btn ghost sm" :disabled="pager.loading||!!pager.loadError" @click="diaper('pee')">💧 小便</button>
+      <button class="btn ghost sm" :disabled="pager.loading||!!pager.loadError" @click="diaper('poop')">💩 大便</button>
     </div>
     <p style="color:var(--c-muted);margin-top:12px;font-size:.9rem">今日：喂奶 {{st.feeds.length}} 次 / {{st.totalMl}}ml · 小便 {{st.pee}} · 大便 {{st.poop}}</p>
   </div>
   <div class="log" v-for="l in logs" :key="l.id">
     <div class="ic" :class="l.type==='feeding'?'feed':(l.diaperType==='poop'?'poop':'pee')">{{l.type==='feeding'?'🍼':(l.diaperType==='poop'?'💩':'💧')}}</div>
     <div class="grow"><b>{{l.type==='feeding'?('喂奶 '+(l.amount||'')+'ml'):('换尿布 · '+(l.diaperType==='poop'?'大便':'小便'))}}</b><small>{{feedTime(l.time)}}{{l.note?(' · '+l.note):''}}</small></div>
-    <button class="btn danger sm" @click="del(l)">删除</button>
+    <button class="btn danger sm" :disabled="pager.loading||!!pager.loadError" @click="del(l)">删除</button>
   </div>
+  <HistoryPager :pager="pager"/>
 </div>` };
 
 /* ---------- ADMIN: diary ---------- */
 const AdDiary={ setup(){
-  const list=computed(()=>state.db.diary.slice().sort((a,b)=>new Date(b.date)-new Date(a.date)));
+  const pager=makeAdminHistoryPager('diary');
+  const list=computed(()=>pager.items);
   const editing=ref(null);
   const blank=()=>({id:'',date:todayStr(),title:'',content:'',images:[]});
-  function open(d){editing.value=d?JSON.parse(JSON.stringify(d)):blank();}
+  function open(d){editing.value=d?cloneData(d):blank();}
   async function save(){const e=editing.value;if(!e.title){alert('请填写标题');return;}
-    try{ if(e.id)await apiUpdate('diary',e.id,e); else await apiCreate('diary',e); editing.value=null; }catch(err){alert(err.message);} }
-  async function del(d){if(await confirmDialog('删除日记「'+d.title+'」？')){try{await apiDelete('diary',d.id);}catch(err){alert(err.message);}}}
+    try{if(e.id)await apiUpdate('diary',e.id,e);else await apiCreate('diary',e);}catch(err){alert(err.message);return;}editing.value=null;try{await pager.refreshAfterMutation();}catch(err){} }
+  async function del(d){if(await confirmDialog('删除日记「'+d.title+'」？')){try{await apiDelete('diary',d.id);await pager.refreshAfterMutation();}catch(err){alert(err.message);}}}
   function addImgs(){const t=editing.value;if(!t)return;pickFiles(u=>{if(editing.value!==t)return;if(!Array.isArray(t.images))t.images=[];t.images.push(u);});}
   function addUrl(){const t=editing.value;if(!t)return;const u=prompt('图片URL');if(!u||editing.value!==t)return;if(!Array.isArray(t.images))t.images=[];t.images.push(u);}
-  return {list,editing,open,save,del,addImgs,addUrl,fmtDate};
+  async function load(offset=pager.offset){try{await pager.load(offset);}catch(e){}}
+  onMounted(()=>load(0));
+  return {list,pager,editing,open,save,del,addImgs,addUrl,fmtDate,load};
 }, template:`
 <div>
-  <div class="admin-head"><h2>📖 日记管理</h2><button class="btn" @click="open()">+ 写日记</button></div>
+  <div class="admin-head"><h2>📖 日记管理</h2><button class="btn" :disabled="pager.loading||!!pager.loadError" @click="open()">+ 写日记</button></div>
+  <p v-if="pager.loading" class="history-status">正在加载日记记录…</p>
+  <p v-else-if="pager.loadError" class="history-status error">{{pager.loadError}} <button class="btn ghost sm" @click="load()">重试</button></p>
   <div class="list-row" v-for="d in list" :key="d.id">
     <div class="thumb" :style="{backgroundImage:'url('+(d.images&&d.images[0]||'')+')'}"></div>
     <div class="grow"><b>{{d.title}}</b><small>{{fmtDate(d.date)}} · {{d.content.slice(0,30)}}…</small></div>
-    <button class="btn gray sm" @click="open(d)">编辑</button><button class="btn danger sm" @click="del(d)">删除</button>
+    <button class="btn gray sm" :disabled="pager.loading" @click="open(d)">编辑</button><button class="btn danger sm" :disabled="pager.loading||!!pager.loadError" @click="del(d)">删除</button>
   </div>
+  <HistoryPager :pager="pager"/>
   <div class="modal-bg" v-if="editing" @click.self="editing=null"><div class="card modal">
     <h3>{{editing.id?'编辑':'新写'}}日记</h3>
     <div class="row2"><div class="field"><label>日期</label><input type="date" v-model="editing.date"/></div>
@@ -1258,23 +1315,35 @@ const HOMENAMES={hero:'Hero 首屏',countdown:'纪念日倒计时',onthisday:'�
 const AdSettings={ components:{Toggle}, setup(){
   const s=state.db.settings;
   const emojiStr=ref(s.deco.emoji.join(' '));
+  const backups=ref([]);
+  const cleanupPreview=ref(null);
+  const busy=key=>pendingActions.has(key);
   function applyPreset(t){Object.assign(s.theme,t);applyTheme();}
   function onColor(){applyTheme();}
   function onDeco(){s.deco.emoji=emojiStr.value.split(/[\s,，]+/).filter(Boolean);applyTheme();}
-  const photoCount=computed(()=>{let n=0;state.db.albums.forEach(a=>n+=a.photos.length);return n+state.db.diary.reduce((x,d)=>x+(d.images?.length||0),0)+state.db.milestones.filter(m=>m.image).length;});
+  const photoCount=computed(()=>{let n=0;state.db.albums.forEach(a=>n+=albumPhotoCount(a));return n+state.db.diary.reduce((x,d)=>x+diaryImageCount(d),0)+state.db.milestones.filter(m=>m.image).length;});
   async function reset(){if(await confirmDialog('确定恢复示例数据？当前所有数据将被覆盖！')){try{await reseed();adminTab.value='overview';go('home');}catch(e){alert(e.message);}}}
-  async function save(){try{await API.put('/settings',JSON.parse(JSON.stringify(s)));alert('设置已保存 ✅');}catch(e){alert(e.message);}}
-  async function exportData(){try{const d=await API.get('/export');const blob=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='baby-growth-backup-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(a.href);}catch(e){alert(e.message);}}
-  function importData(){const i=document.createElement('input');i.type='file';i.accept='application/json,.json';i.onchange=async e=>{const f=e.target.files[0];if(!f)return;if(!await confirmDialog('导入将覆盖服务器上当前所有数据（宝贝/里程碑/相册/成长/日常/日记/视频/留言/小结/疫苗/设置），确定继续？'))return;try{const data=JSON.parse(await f.text());await API.post('/import',data);await refresh();alert('导入成功 ✅');}catch(err){alert('导入失败：'+err.message);}};i.click();}
+  async function save(){try{const payload=JSON.parse(JSON.stringify(s));const saved=await runAction('settings:save',()=>API.put('/settings',payload));if(saved&&saved.ai){s.ai.apiKey='';s.ai.apiKeyConfigured=!!saved.ai.apiKeyConfigured;s.ai.clearApiKey=false;s.ai.enabled=!!saved.ai.enabled;}alert('设置已保存 ✅');}catch(e){alert(e.message);}}
+  async function exportData(){try{const d=await API.get('/export');const blob=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='baby-growth-backup-'+todayStr()+'.json';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(a.href);}catch(e){alert(e.message);}}
+  function importData(){const i=document.createElement('input');i.type='file';i.accept='application/json,.json';i.onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const data=JSON.parse(await f.text());const preview=await API.post('/import/validate',data);const summary=preview.summary||{};const msg='预检通过：相册 '+(summary.albums||0)+' 个、照片 '+(summary.photos||0)+' 项、日常记录 '+(summary.daily||0)+' 条。\n导入前会自动创建完整备份，并撤销旧相册分享链接，确定继续？';if(!await confirmDialog(msg))return;const result=await runAction('import:apply',()=>API.post('/import?confirm=true',data));await refresh();await loadBackups();alert('导入成功，操作前备份：'+result.backupId);}catch(err){alert('导入失败：'+err.message);}};i.click();}
+  async function loadBackups(){try{backups.value=await API.get('/backups');}catch(e){backups.value=[];}}
+  async function createBackup(){try{const b=await runAction('backup:create',()=>API.post('/backups',{reason:'manual'}));await loadBackups();alert('完整备份已创建：'+b.backupId);}catch(e){alert('备份失败：'+e.message);}}
+  function downloadBackup(b){const a=document.createElement('a');a.href='/api/backups/'+encodeURIComponent(b.backupId)+'/download';a.download='';document.body.appendChild(a);a.click();a.remove();}
+  async function removeBackup(b){if(!await confirmDialog('删除备份 '+b.backupId+'？'))return;try{await runAction('backup:delete:'+b.backupId,()=>API.del('/backups/'+encodeURIComponent(b.backupId)));await loadBackups();}catch(e){alert(e.message);}}
+  async function previewMediaCleanup(){try{cleanupPreview.value=await runAction('media:preview',()=>API.post('/media/cleanup/preview',{olderThanHours:24}));if(!(cleanupPreview.value.orphanFiles+cleanupPreview.value.temporaryFiles))alert('没有发现可清理的媒体文件。');}catch(e){alert('扫描失败：'+e.message);}}
+  async function executeMediaCleanup(){const p=cleanupPreview.value;if(!p)return;const count=(p.orphanFiles||0)+(p.temporaryFiles||0);if(!count){cleanupPreview.value=null;return;}const msg='将删除 '+count+' 个未引用或过期临时文件，预计释放 '+fmtBytes((p.orphanBytes||0)+(p.temporaryBytes||0))+'。\n清理前会自动创建完整备份，确定继续？';if(!await confirmDialog(msg))return;try{const result=await runAction('media:cleanup',()=>API.post('/media/cleanup',{olderThanHours:24,confirmToken:p.confirmToken}));cleanupPreview.value=null;await loadBackups();alert('媒体清理完成：删除 '+result.deletedFiles+' 个文件，释放 '+fmtBytes(result.releasedBytes)+(result.backupId?'，备份 '+result.backupId:''));}catch(e){alert('清理失败：'+e.message);}}
+  function fmtBytes(n){n=+n||0;if(n<1024)return n+' B';if(n<1048576)return (n/1024).toFixed(1)+' KB';if(n<1073741824)return (n/1048576).toFixed(1)+' MB';return (n/1073741824).toFixed(1)+' GB';}
+  onMounted(loadBackups);
   async function saveFavicon(){ try{ await API.put('/settings', JSON.parse(JSON.stringify(s))); }catch(e){ alert('保存失败：'+e.message); } }
   function pickIcon(){pickFile(async u=>{s.faviconUrl=u;applyTheme();await saveFavicon();});}
   async function resetIcon(){s.faviconUrl='';applyTheme();await saveFavicon();}
+  function clearAiKey(){s.ai.apiKey='';s.ai.clearApiKey=true;s.ai.apiKeyConfigured=false;s.ai.enabled=false;}
   const FRAMES=[['polaroid','宝丽来','🎞️'],['matted','白边墙','🖼️'],['wood','复古木质','🪵'],['none','无框','⬜']];
   async function setFrame(style){ s.photoFrame=style; applyTheme(); await saveFavicon(); }
-  return {s,THEMES,MODNAMES,HOMENAMES,FRAMES,applyPreset,onColor,onDeco,emojiStr,photoCount,reset,save,exportData,importData,pickIcon,resetIcon,setFrame,DEFAULT_FAVICON};
+  return {s,THEMES,MODNAMES,HOMENAMES,FRAMES,applyPreset,onColor,onDeco,emojiStr,photoCount,reset,save,exportData,importData,pickIcon,resetIcon,clearAiKey,setFrame,DEFAULT_FAVICON,backups,cleanupPreview,busy,createBackup,downloadBackup,removeBackup,previewMediaCleanup,executeMediaCleanup,fmtBytes,fmtDate};
 }, template:`
 <div>
-  <div class="admin-head"><h2>⚙️ 显示设置</h2><button class="btn" @click="save">保存设置</button></div>
+  <div class="admin-head"><h2>⚙️ 显示设置</h2><button class="btn" :disabled="busy('settings:save')" @click="save">{{busy('settings:save')?'保存中…':'保存设置'}}</button></div>
   <div class="card" style="padding:22px;margin-bottom:16px">
     <h4 style="margin-bottom:12px">🎨 主题配色</h4>
     <div class="swatch" style="margin-bottom:16px"><button v-for="t in THEMES" :key="t.name" :title="t.name" :class="{on:s.theme.name===t.name}" :style="{background:'linear-gradient(135deg,'+t.primary+','+t.accent+')'}" @click="applyPreset(t)"></button></div>
@@ -1286,7 +1355,7 @@ const AdSettings={ components:{Toggle}, setup(){
   </div>
   <div class="card" style="padding:22px;margin-bottom:16px">
     <h4 style="margin-bottom:6px">✨ 背景装饰</h4>
-    <div class="toggle-row"><span>启用漂浮装饰</span><Toggle v-model="s.deco.enabled" @update:modelValue="onDeco"/></div>
+    <div class="toggle-row"><span>启用漂浮装饰</span><Toggle v-model="s.deco.enabled" label="启用漂浮装饰" @update:modelValue="onDeco"/></div>
     <div class="field" style="margin-top:14px"><label>透明度 {{Math.round(s.deco.opacity*100)}}%</label><input type="range" min="0" max="1" step="0.05" v-model.number="s.deco.opacity" @input="onDeco"/></div>
     <div class="field"><label>装饰图案（空格分隔的 Emoji）</label><input v-model="emojiStr" @change="onDeco"/></div>
   </div>
@@ -1311,29 +1380,39 @@ const AdSettings={ components:{Toggle}, setup(){
   </div>
   <div class="row2" style="align-items:start">
     <div class="card" style="padding:22px"><h4 style="margin-bottom:6px">🧩 功能模块开关</h4>
-      <div class="toggle-row" v-for="(nm,k) in MODNAMES" :key="k"><span>{{nm}}</span><Toggle v-model="s.modules[k]"/></div></div>
+      <div class="toggle-row" v-for="(nm,k) in MODNAMES" :key="k"><span>{{nm}}</span><Toggle v-model="s.modules[k]" :label="nm"/></div></div>
     <div class="card" style="padding:22px"><h4 style="margin-bottom:6px">🏠 首页区块开关</h4>
-      <div class="toggle-row" v-for="(nm,k) in HOMENAMES" :key="k"><span>{{nm}}</span><Toggle v-model="s.home[k]"/></div></div>
+      <div class="toggle-row" v-for="(nm,k) in HOMENAMES" :key="k"><span>{{nm}}</span><Toggle v-model="s.home[k]" :label="nm"/></div></div>
   </div>
   <div class="card" style="padding:22px;margin-top:16px"><h4 style="margin-bottom:12px">🍼 喂奶默认参数</h4>
     <div class="row2"><div class="field"><label>默认单次奶量 (ml)</label><input type="number" v-model.number="s.feeding.defaultAmount"/></div>
       <div class="field"><label>预计每日奶量 (ml)</label><input type="number" v-model.number="s.feeding.dailyTarget"/></div></div></div>
   <div class="card" style="padding:22px;margin-top:16px"><h4 style="margin-bottom:6px">🤖 AI 助手（可选大模型）</h4>
-    <p style="color:var(--c-muted);font-size:.86rem;margin-bottom:12px">不填则使用内置指令助手（免费）。填入 OpenAI 兼容接口后升级为自然语言对话。密钥保存在服务器端，公开接口不会返回。</p>
-    <div class="toggle-row"><span>启用大模型自然语言对话</span><Toggle v-model="s.ai.enabled"/></div>
-    <div class="field" style="margin-top:12px"><label>API Key</label><input v-model="s.ai.apiKey" type="password" placeholder="sk-..."/></div>
+    <p style="color:var(--c-muted);font-size:.86rem;margin-bottom:12px">不填则使用内置指令助手（免费）。已保存密钥只保留在服务器，页面仅显示配置状态；输入新密钥会替换旧值。</p>
+    <div class="toggle-row"><span>启用大模型自然语言对话</span><Toggle v-model="s.ai.enabled" label="启用大模型自然语言对话"/></div>
+    <div class="field" style="margin-top:12px"><label>API Key <span v-if="s.ai.apiKeyConfigured" class="pill ok">已保存密钥</span></label><div style="display:flex;gap:8px;align-items:center"><input v-model="s.ai.apiKey" type="password" :placeholder="s.ai.apiKeyConfigured?'留空保留已保存密钥':'sk-...'" @input="s.ai.clearApiKey=false"/><button v-if="s.ai.apiKeyConfigured" class="btn danger sm" @click="clearAiKey">清除密钥</button></div></div>
     <div class="row2"><div class="field"><label>Base URL</label><input v-model="s.ai.baseUrl"/></div>
       <div class="field"><label>模型</label><input v-model="s.ai.model"/></div></div></div>
   <div class="card" style="padding:22px;margin-top:16px"><h4 style="margin-bottom:6px">🔐 管理员账号</h4>
-    <p style="color:var(--c-muted);font-size:.9rem">管理员账号在服务器 .env 中配置（ADMIN_USERNAME / ADMIN_PASSWORD），修改后重启服务生效。</p></div>
+    <p style="color:var(--c-muted);font-size:.9rem">管理员账号由首次部署配置创建。后续密码请在“个人资料”中修改；修改后其他设备的旧会话会立即失效。</p></div>
   <div class="card" style="padding:22px;margin-top:16px"><h4 style="margin-bottom:6px">🗂️ 文件与数据</h4>
     <p style="color:var(--c-muted);font-size:.9rem;margin-bottom:12px">当前约 {{photoCount}} 张图片引用 · 数据与图片保存在服务器（SQLite 数据库 + uploads 目录）</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+      <button class="btn sm" :disabled="busy('backup:create')" @click="createBackup">{{busy('backup:create')?'创建中…':'🛡️ 创建完整备份'}}</button>
       <button class="btn ghost sm" @click="exportData">⬇️ 导出数据(JSON)</button>
-      <button class="btn ghost sm" @click="importData">⬆️ 导入恢复</button>
+      <button class="btn ghost sm" :disabled="busy('import:apply')" @click="importData">{{busy('import:apply')?'导入中…':'⬆️ 导入恢复'}}</button>
+      <button class="btn ghost sm" :disabled="busy('media:preview')" @click="previewMediaCleanup">{{busy('media:preview')?'扫描中…':'🧹 扫描未引用媒体'}}</button>
     </div>
-    <p style="color:var(--c-muted);font-size:.78rem;margin:0 0 12px">导出为数据 JSON（不含照片/视频文件；完整备份请另存 uploads 目录）。导入会覆盖当前数据。</p>
-    <button class="btn danger sm" @click="reset">恢复示例数据（覆盖当前）</button></div>
+    <div v-if="cleanupPreview" class="list-row" style="padding:10px 0;margin-bottom:10px">
+      <div class="grow"><b>媒体清理预览</b><small>未引用 {{cleanupPreview.orphanFiles||0}} 个 · 临时 {{cleanupPreview.temporaryFiles||0}} 个 · 可释放 {{fmtBytes((cleanupPreview.orphanBytes||0)+(cleanupPreview.temporaryBytes||0))}}<template v-if="cleanupPreview.missingReferences"> · 缺失引用 {{cleanupPreview.missingReferences}} 个</template></small></div>
+      <button class="btn danger sm" :disabled="busy('media:cleanup')||!((cleanupPreview.orphanFiles||0)+(cleanupPreview.temporaryFiles||0))" @click="executeMediaCleanup">{{busy('media:cleanup')?'清理中…':'确认清理'}}</button>
+    </div>
+    <p style="color:var(--c-muted);font-size:.78rem;margin:0 0 12px">完整备份包含 SQLite 和上传文件，自动保留最近 2 份。JSON 导入会先预检并创建完整备份。</p>
+    <div class="list-row" v-for="b in backups" :key="b.backupId" style="padding:10px 0">
+      <div class="grow"><b>{{b.reason||'manual'}}</b><small>{{fmtDate(b.createdAt)}} · {{fmtBytes(b.bytes)}} · {{b.uploadFiles||0}} 个上传文件</small></div>
+      <button class="btn ghost sm" @click="downloadBackup(b)">下载</button><button class="btn danger sm" :disabled="busy('backup:delete:'+b.backupId)" @click="removeBackup(b)">{{busy('backup:delete:'+b.backupId)?'删除中…':'删除'}}</button>
+    </div>
+    <button class="btn danger sm" :disabled="busy('admin:seed')" @click="reset">{{busy('admin:seed')?'恢复中…':'恢复示例数据（覆盖当前）'}}</button></div>
 </div>` };
 const AdVideos={ setup(){
   const list=computed(()=>state.db.videos||[]);
@@ -1343,7 +1422,7 @@ const AdVideos={ setup(){
   async function save(){const e=editing.value;if(!e.title||!e.url){alert('请填写标题并上传视频');return;}
     try{ if(e.id)await apiUpdate('videos',e.id,e); else await apiCreate('videos',e); editing.value=null; }catch(err){alert(err.message);} }
   async function del(v){if(await confirmDialog('删除视频「'+v.title+'」？')){try{await apiDelete('videos',v.id);}catch(err){alert(err.message);}}}
-  function pickVideo(){const t=editing.value;if(!t)return;const i=document.createElement('input');i.type='file';i.accept='video/*';i.onchange=async ev=>{const f=ev.target.files[0];if(!f)return;const v=checkFile(f);if(!v.ok){alert(v.msg);return;}uploadState.cancelled=false;uploadState.active=true;uploadState.pct=0;uploadState.label=f.name+' (分片上传中)';uploadState.index=1;uploadState.total=1;try{const r=await xhrUploadChunked(f,p=>uploadState.pct=p);const it=(r.items&&r.items[0])||{};if(editing.value===t){t.url=it.url||r.url;if(!t.cover&&it.poster)t.cover=it.poster;}}catch(err){if(!err.cancelled){console.error('pickVideo failed',err);alert('上传失败：'+err.message);}}finally{uploadState.active=false;}};i.click();}
+  function pickVideo(){const t=editing.value;if(!t)return;const i=document.createElement('input');i.type='file';i.accept='video/*';i.onchange=async ev=>{const f=ev.target.files[0];if(!f)return;const v=validateUploadFile(f,state.db&&state.db.limits,UPLOAD_LIMITS_DEFAULT,IMG_EXT,VID_EXT);if(!v.ok){alert(v.msg);return;}uploadState.cancelled=false;uploadState.cancellable=true;uploadState.active=true;uploadState.pct=0;uploadState.label=f.name+' (分片上传中)';uploadState.index=1;uploadState.total=1;try{const r=await xhrUploadChunked(f,p=>uploadState.pct=p);const it=(r.items&&r.items[0])||{};if(editing.value===t){t.url=it.url||r.url;if(!t.cover&&it.poster)t.cover=it.poster;}}catch(err){if(!err.cancelled){console.error('pickVideo failed',err);alert('上传失败：'+err.message);}}finally{uploadState.active=false;uploadState.cancellable=true;}};i.click();}
   function pickVideoCover(){const t=editing.value;if(!t)return;pickFile(u=>{if(editing.value===t)t.cover=u;});}
   return {list,editing,open,save,del,fmtDate,pickVideo,pickVideoCover};
 }, template:`
@@ -1369,23 +1448,49 @@ const AdVideos={ setup(){
 
 const AdMembers={ setup(){
   const list=ref([]);
+  const resetTarget=ref(null);const resetForm=reactive({password:'',confirm:''});const resetBusy=ref(false);const resetError=ref('');
   async function load(){try{list.value=await API.get('/users');}catch(e){list.value=[];}}
   async function toggle(u){try{await API.post('/users/'+u.id+'/status',{disabled:!u.disabled});await load();}catch(e){alert(e.message);}}
   async function del(u){if(await confirmDialog('删除成员「'+u.username+'」？该账号将无法再登录。')){try{await API.del('/users/'+u.id);await load();}catch(e){alert(e.message);}}}
+  function clearReset(){resetForm.password='';resetForm.confirm='';resetError.value='';}
+  function openReset(u){clearReset();resetTarget.value=u;}
+  function closeReset(){if(resetBusy.value)return;resetTarget.value=null;clearReset();}
+  async function submitReset(){
+    resetError.value='';
+    if(resetForm.password.length<8){resetError.value='新密码至少 8 位';return;}
+    if(resetForm.password!==resetForm.confirm){resetError.value='两次输入的新密码不一致';return;}
+    const target=resetTarget.value;if(!target||resetBusy.value)return;
+    resetBusy.value=true;
+    try{
+      await runAction('member:reset-password:'+target.id,()=>API.post('/users/'+target.id+'/reset-password',{newPassword:resetForm.password}));
+      resetTarget.value=null;clearReset();
+      alert('密码重置成功，该成员所有旧会话已退出');
+    }catch(e){resetError.value=e.message||'密码重置失败';}
+    finally{resetBusy.value=false;}
+  }
   onMounted(load);
-  return {list,toggle,del,fmtDate};
+  return {list,resetTarget,resetForm,resetBusy,resetError,toggle,del,openReset,closeReset,submitReset,fmtDate};
 }, template:`
 <div>
   <div class="admin-head"><h2>👥 成员管理</h2></div>
-  <p style="color:var(--c-muted);margin-bottom:14px">管理员账号受保护，不能在此禁用或删除。</p>
+  <p style="color:var(--c-muted);margin-bottom:14px">管理员账号受保护，不能在此禁用、删除或重置密码。</p>
   <div class="list-row" v-for="u in list" :key="u.id">
     <span :style="{background:u.role==='admin'?'#ef8fa4':'#7fc8d4',width:'40px',height:'40px',borderRadius:'50%',display:'grid',placeItems:'center',color:'#fff',fontWeight:700,flex:'none'}">{{(u.username||'?').slice(0,1).toUpperCase()}}</span>
     <div class="grow"><b>{{u.username}}</b><small>{{u.role==='admin'?'管理员':'家庭成员'}}<template v-if="u.createdAt"> · 注册于 {{fmtDate(u.createdAt)}}</template></small></div>
     <span class="pill" :class="u.disabled?'pend':'ok'">{{u.role==='admin'?'管理员':(u.disabled?'已禁用':'正常')}}</span>
+    <button v-if="u.role!=='admin'" class="btn ghost sm" :disabled="resetBusy" @click="openReset(u)">重置密码</button>
     <button v-if="u.role!=='admin'" class="btn gray sm" @click="toggle(u)">{{u.disabled?'启用':'禁用'}}</button>
     <button v-if="u.role!=='admin'" class="btn danger sm" @click="del(u)">删除</button>
   </div>
   <p v-if="!list.length" style="color:var(--c-muted)">还没有成员。</p>
+  <div class="modal-bg" v-if="resetTarget" @click.self="closeReset"><div class="card modal">
+    <h3>🔑 重置“{{resetTarget.username}}”的密码</h3>
+    <p style="color:var(--c-muted);margin-bottom:14px">保存后该成员所有设备上的旧会话会立即退出，禁用状态不会改变。</p>
+    <div class="field"><label>新密码（至少 8 位）</label><input type="password" autocomplete="new-password" v-model="resetForm.password" @keyup.enter="submitReset"/></div>
+    <div class="field"><label>确认新密码</label><input type="password" autocomplete="new-password" v-model="resetForm.confirm" @keyup.enter="submitReset"/></div>
+    <p v-if="resetError" style="color:#e0576a;margin:0 0 12px">{{resetError}}</p>
+    <div style="display:flex;gap:10px;justify-content:flex-end"><button class="btn gray" :disabled="resetBusy" @click="closeReset">取消</button><button class="btn" :disabled="resetBusy" @click="submitReset">{{resetBusy?'重置中…':'确认重置'}}</button></div>
+  </div></div>
 </div>` };
 
 const AdRecaps={ setup(){
@@ -1490,8 +1595,8 @@ const AuthGate={ setup(){
   const tab=ref('login'); const form=reactive({u:'',p:'',code:'',remember:false}); const err=ref(''); const busy=ref(false);
   const regHint='请向管理员索取邀请码';
   onMounted(()=>{try{const r=JSON.parse(LS.getItem('bgt_remember')||'null');if(r&&r.u){form.u=r.u;form.remember=true;}}catch(e){}});
-  async function login(){err.value='';busy.value=true;try{const fd=new FormData();fd.append('username',form.u);fd.append('password',form.p);const r=await API.req('POST','/auth/login',{form:fd});API.setToken(r.access_token);if(form.remember)LS.setItem('bgt_remember',JSON.stringify({u:form.u}));else LS.removeItem('bgt_remember');await refresh();go('home');}catch(e){err.value=e.message||'登录失败';}busy.value=false;}
-  async function register(){err.value='';if(!form.u||form.p.length<4){err.value='请填写用户名，密码至少 4 位';return;}busy.value=true;try{const r=await API.post('/auth/register',{username:form.u,password:form.p,code:form.code});API.setToken(r.access_token);await refresh();go('home');}catch(e){err.value=e.message||'注册失败';}busy.value=false;}
+  async function login(){err.value='';busy.value=true;try{const fd=new FormData();fd.append('username',form.u);fd.append('password',form.p);await API.req('POST','/auth/login',{form:fd});API.setToken('');if(form.remember)LS.setItem('bgt_remember',JSON.stringify({u:form.u}));else LS.removeItem('bgt_remember');await refresh();go('home');}catch(e){err.value=e.message||'登录失败';}busy.value=false;}
+  async function register(){err.value='';if(!form.u||form.p.length<8){err.value='请填写用户名，密码至少 8 位';return;}busy.value=true;try{await API.post('/auth/register',{username:form.u,password:form.p,code:form.code});API.setToken('');await refresh();go('home');}catch(e){err.value=e.message||'注册失败';}busy.value=false;}
   function submit(){tab.value==='login'?login():register();}
   return {tab,form,err,busy,submit,regHint,state};
 }, template:`
@@ -1532,11 +1637,13 @@ const App={ components:{SiteNav,SiteFooter,Lightbox,AiWidget,AuthGate,ShareView}
     if(['timeline','gallery','videos','growth','vaccine','daily','diary','messages','about'].includes(n)&&state.db.settings.modules[n]===false)return Home;if(n==='admin'&&state.session.role!=='admin')return Home;return v;});
   const showFooter=computed(()=>route.name!=='admin');
   watch(()=>[route.name,route.params.id],()=>observeReveals());
-  return {cur,showFooter,state,route,up:uploadState,cancel:cancelUpload,cf:confirmState,confirmYes,confirmNo};
+  let clockTimer;onMounted(()=>{clockTimer=setInterval(()=>{clockTick.value++;},30000);});onUnmounted(()=>clearInterval(clockTimer));
+  return {cur,showFooter,state,route,startup,retryBootstrap,toasts,pending:pendingActions,up:uploadState,cancel:cancelUpload,cf:confirmState,confirmYes,confirmNo};
 }, template:`
 <div>
   <ShareView v-if="route.name==='share'"/>
-  <div v-else-if="!state.ready" style="min-height:70vh;display:grid;place-items:center;color:var(--c-muted);font-size:1.1rem">🍼 加载中…</div>
+  <div v-else-if="startup.loading" class="startup-state"><div><div class="startup-icon">🍼</div><p>正在加载家庭成长记录…</p></div></div>
+  <div v-else-if="startup.error" class="startup-state"><div class="card startup-error"><div class="startup-icon">🌧️</div><h2>暂时无法加载</h2><p>{{startup.error}}</p><button class="btn" @click="retryBootstrap">重新加载</button></div></div>
   <AuthGate v-else-if="!state.session.loggedIn"/>
   <template v-else>
     <SiteNav/>
@@ -1544,7 +1651,9 @@ const App={ components:{SiteNav,SiteFooter,Lightbox,AiWidget,AuthGate,ShareView}
     <SiteFooter v-if="showFooter"/>
     <AiWidget/>
   </template>
-  <div v-if="up.active" class="upbar"><div class="upbar-card"><div class="upbar-row"><span>⬆️ 正在上传 {{up.label}}<template v-if="up.total>1"> · {{up.index}}/{{up.total}}</template></span><div style="display:flex;align-items:center;gap:10px"><b>{{up.pct}}%</b><button class="upbar-cancel" v-if="!up.cancelled" @click="cancel" title="取消上传">取消</button><span v-else class="upbar-hint">取消中...</span></div></div><div class="upbar-track"><i :style="{width:up.pct+'%'}"></i></div></div></div>
+  <div class="toast-stack" aria-live="polite" aria-atomic="false"><div class="toast" v-for="item in toasts.items" :key="item.id" :class="item.type"><span>{{item.type==='success'?'✓':item.type==='error'?'!':'i'}}</span><p>{{item.message}}</p><button @click="toasts.remove(item.id)" aria-label="关闭提示">✕</button></div></div>
+  <div v-if="pending.size&&!up.active" class="action-busy" role="status">处理中…</div>
+  <div v-if="up.active" class="upbar"><div class="upbar-card"><div class="upbar-row"><span>⬆️ {{up.cancellable?'正在上传':'正在处理'}} {{up.label}}<template v-if="up.total>1"> · {{up.index}}/{{up.total}}</template></span><div style="display:flex;align-items:center;gap:10px"><b>{{up.pct}}%</b><button class="upbar-cancel" v-if="!up.cancelled&&up.cancellable" @click="cancel" title="取消上传">取消</button><span v-else-if="up.cancelled" class="upbar-hint">取消中...</span><span v-else class="upbar-hint">请稍候...</span></div></div><div class="upbar-track"><i :style="{width:up.pct+'%'}"></i></div></div></div>
   <div v-if="cf.open" class="modal-bg" style="z-index:210" @click.self="confirmNo">
     <div class="card" style="max-width:360px;padding:26px;text-align:center">
       <div style="font-size:2rem">🗑️</div>
@@ -1558,7 +1667,7 @@ const App={ components:{SiteNav,SiteFooter,Lightbox,AiWidget,AuthGate,ShareView}
 /* ---------- bootstrap ---------- */
 const app=createApp(App);
 app.config.globalProperties.isVideo=isVideo;app.config.globalProperties.vxInfo=vxInfo;app.config.globalProperties.vxMonLabel=vxMonLabel;
-[['AdOverview',AdOverview],['AdBaby',AdBaby],['AdMilestones',AdMilestones],['AdAlbums',AdAlbums],['AdGrowth',AdGrowth],['AdDaily',AdDaily],['AdDiary',AdDiary],['AdMessages',AdMessages],['AdSettings',AdSettings],['AdVideos',AdVideos],['AdInvites',AdInvites],['AdMembers',AdMembers],['AdRecaps',AdRecaps],['AdVaccines',AdVaccines],['Toggle',Toggle],['MediaThumb',MediaThumb],['AuthGate',AuthGate],['ShareView',ShareView]].forEach(([n,c])=>app.component(n,c));
+[['AdOverview',AdOverview],['AdBaby',AdBaby],['AdMilestones',AdMilestones],['AdAlbums',AdAlbums],['AdGrowth',AdGrowth],['AdDaily',AdDaily],['AdDiary',AdDiary],['AdMessages',AdMessages],['AdSettings',AdSettings],['AdVideos',AdVideos],['AdInvites',AdInvites],['AdMembers',AdMembers],['AdRecaps',AdRecaps],['AdVaccines',AdVaccines],['Toggle',Toggle],['MediaThumb',MediaThumb],['HistoryPager',HistoryPager],['AuthGate',AuthGate],['ShareView',ShareView]].forEach(([n,c])=>app.component(n,c));
 parseHash();
 window.addEventListener('hashchange',parseHash);
 // 迁移：清除旧版本可能残留在 localStorage 里的明文密码，只保留用户名
@@ -1568,5 +1677,16 @@ window.addEventListener('beforeunload',e=>{ if(uploadState.active){ e.preventDef
 app.mount('#app');
 applyTheme();
 API.setToken(API.token);
-loadBranding();
-refresh().catch(e=>console.error('bootstrap 失败',e)).finally(()=>{ state.ready=true; observeReveals(); });
+async function bootstrapApp(){
+  if(API.token){try{await API.post('/auth/session');}catch(e){}finally{API.setToken('');}}
+  await loadBranding();
+  await refresh();
+}
+async function retryBootstrap(){
+  if(startup.loading)return;
+  startup.loading=true;startup.error='';state.ready=false;
+  try{await bootstrapApp();}
+  catch(e){if(e&&e.status!==401){startup.error=startupErrorMessage(e);console.error('bootstrap 失败',e);}}
+  finally{startup.loading=false;state.ready=true;observeReveals();}
+}
+retryBootstrap();

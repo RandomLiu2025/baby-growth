@@ -15,6 +15,7 @@ DOMAIN="${1:-}"
 SUDO=""; [ "$(id -u)" -ne 0 ] && SUDO="sudo"
 say(){ printf "\n\033[1;35m== %s ==\033[0m\n" "$1"; }
 upsert(){ local k="$1" v="$2" f="${3:-.env}"; touch "$f"; if grep -q "^${k}=" "$f"; then sed -i "s|^${k}=.*|${k}=${v}|" "$f"; else echo "${k}=${v}" >> "$f"; fi; }
+random_hex(){ local bytes="$1"; openssl rand -hex "$bytes" 2>/dev/null || head -c "$bytes" /dev/urandom | od -An -tx1 | tr -d ' \n'; }
 
 say "宝贝成长记 · 一键部署"
 
@@ -26,27 +27,62 @@ if ! command -v docker >/dev/null 2>&1; then
 fi
 docker compose version >/dev/null 2>&1 || { echo "❌ 需要 docker compose 插件（Docker 20.10+）"; exit 1; }
 
-# 2) .env（首次生成随机密钥，保留已有配置）
+# 2) .env（首次生成随机密钥和管理员密码，保留已有配置）
 if [ ! -f .env ]; then
-  say "生成 .env（随机密钥）"
-  SECRET="$(openssl rand -hex 32 2>/dev/null || head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+  say "生成 .env（随机密钥和管理员密码）"
+  SECRET="$(random_hex 32)"
+  DATA_SECRET="$(random_hex 32)"
+  ADMIN_PASS="$(random_hex 12)"
   cat > .env <<EOF
 SECRET_KEY=${SECRET}
+DATA_ENCRYPTION_KEY=${DATA_SECRET}
 ADMIN_USERNAME=admin
-ADMIN_PASSWORD=admin123
+ADMIN_PASSWORD=${ADMIN_PASS}
+SESSION_COOKIE_SECURE=false
+APP_BIND_ADDRESS=127.0.0.1
+APP_TIMEZONE=Asia/Shanghai
+CORS_ORIGINS=
+TRUST_PROXY_HEADERS=false
+AI_ALLOW_PRIVATE_BASE_URLS=false
 MAX_IMAGE_MB=10
 MAX_VIDEO_MB=200
+MAX_UPLOAD_FILES=20
+CHUNK_TTL_HOURS=24
+MIN_UPLOAD_FREE_MB=512
+MAX_IMAGE_PIXELS=100000000
+MAX_VIDEO_DURATION_SECONDS=3600
+MAX_VIDEO_PIXELS=8294400
+MAX_VIDEO_FPS=60
+MAX_CONCURRENT_UPLOADS=6
+MAX_CONCURRENT_MEDIA_JOBS=2
+MEDIA_PROBE_TIMEOUT_SECONDS=15
+MEDIA_PROCESS_TIMEOUT_SECONDS=1800
+BACKUP_RETENTION=2
+MAX_IMPORT_MB=20
+MAX_IMPORT_RECORDS=50000
+AUTO_BACKUP_BEFORE_MIGRATION=true
 EOF
-  echo "  默认管理员 admin / admin123，登录后请尽快在「个人资料」修改密码。"
+  echo "  初始管理员：admin"
+  echo "  初始密码：${ADMIN_PASS}"
+  echo "  请妥善保存，并在首次登录后修改密码。"
+fi
+if ! grep -Eq '^DATA_ENCRYPTION_KEY=.{32,}$' .env; then
+  say "生成 AI 数据加密密钥"
+  upsert DATA_ENCRYPTION_KEY "$(random_hex 32)"
 fi
 
 # 3) 构建并启动（有域名则附带 Caddy 反代 + 自动 HTTPS）
 PROFILE=""
 if [ -n "$DOMAIN" ]; then
   upsert SITE_ADDRESS "$DOMAIN"
+  upsert SESSION_COOKIE_SECURE true
+  upsert APP_BIND_ADDRESS 127.0.0.1
+  upsert TRUST_PROXY_HEADERS true
   PROFILE="--profile proxy"
   say "构建并启动（含 Caddy 自动 HTTPS · ${DOMAIN}）"
 else
+  upsert APP_BIND_ADDRESS 0.0.0.0
+  upsert TRUST_PROXY_HEADERS false
   say "构建并启动"
 fi
 # shellcheck disable=SC2086
@@ -67,6 +103,6 @@ if [ -n "$DOMAIN" ]; then
 else
   IP="$(curl -s -m3 ifconfig.me 2>/dev/null || hostname -I 2>/dev/null | awk '{print $1}' || echo localhost)"
   say "完成！打开 http://${IP}:8000"
-  echo "  默认管理员：admin / admin123（请尽快修改）"
+  echo "  管理员账号：admin（初始密码见 .env，请妥善保管）"
   echo "  绑定域名 + 自动 HTTPS： sudo bash deploy.sh 你的域名"
 fi

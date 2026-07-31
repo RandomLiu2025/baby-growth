@@ -2,7 +2,7 @@
 import copy
 from datetime import datetime, timedelta, timezone
 
-from . import models
+from . import clock, models
 from .defaults import DEFAULT_SETTINGS
 
 BIRTH = "2024-09-15"
@@ -28,7 +28,8 @@ def seed_sample(db, reset=False):
     if reset:
         for a in db.query(models.Album).all():
             db.delete(a)              # cascade 删除照片
-        for M in (models.Milestone, models.Growth, models.Daily, models.Diary, models.Message):
+        for M in (models.Milestone, models.Growth, models.Daily, models.Diary, models.Video,
+                  models.Message, models.Recap, models.Vaccine, models.Share):
             db.query(M).delete()
         db.commit()
 
@@ -110,8 +111,8 @@ def seed_sample(db, reset=False):
     # “那年今天”演示：一年前 / 两年前的今天（让首页该区块有内容可展示）
     for yrs, t2, c2, cs in [(1, "去年的今天", "翻开相册，去年这一天的你还那么小，时间过得真快呀。", "oty1"),
                             (2, "两年前的今天", "那年今天的小瞬间，被我们悄悄珍藏。", "oty2")]:
-        d0 = datetime.now() - timedelta(days=365 * yrs)   # 服务器本地时间，贴近家庭所在时区
-        db.add(models.Diary(date=d0.date().isoformat(), title=t2, content=c2, images=[pic(cs, 800, 500)]))
+        d0 = clock.local_today() - timedelta(days=365 * yrs)
+        db.add(models.Diary(date=d0.isoformat(), title=t2, content=c2, images=[pic(cs, 800, 500)]))
 
     # 成长视频
     videos = [

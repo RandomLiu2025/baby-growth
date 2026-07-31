@@ -16,10 +16,11 @@
 
 {$SITE_ADDRESS:localhost} {
 	encode zstd gzip
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
 
 	# 允许较大照片/视频上传（Cloudflare 免费版 100s 上限由前端分批+压缩解决）
 	request_body {
-		max_size 200MB
+		max_size 220MB
 	}
 
 	# 反向代理到 app:8000
