@@ -1,9 +1,11 @@
 services:
   app:
     build: .
+    # CI 自动构建推送到 Docker Hub；部署端可用环境变量 IMAGE 指定镜像
+    image: ${IMAGE:-fengliu1989/baby-growth:latest}
     container_name: baby-growth
     ports:
-      - "${APP_BIND_ADDRESS:-127.0.0.1}:8000:8000"
+      - "${APP_BIND_ADDRESS:-127.0.0.1}:8000:8030"
     environment:
       # 可用根目录 .env 覆盖（deploy.sh 会自动生成随机 SECRET_KEY）
       - APP_ENV=production
