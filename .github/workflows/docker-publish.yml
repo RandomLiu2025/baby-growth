@@ -96,3 +96,7 @@ jobs:
           labels: ${{ steps.meta-aliyun.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          # 阿里云 ACR 不支持 buildx 默认附带的 OCI attestation 清单
+          # （会报 denied: unknown manifest class for application/vnd.oci.empty.v1+json）
+          provenance: false
+          sbom: false
