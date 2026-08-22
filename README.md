@@ -101,12 +101,12 @@ uv pip install -r requirements.txt
 cp .env.example .env             # 按需修改密钥与管理员账号
 python seed.py                   # 可选：填充示例数据（会重置内容）
 
-uvicorn app.main:app --reload --port 8000
+uvicorn app.main:app --reload --port 8030
 ```
 
-打开 http://localhost:8000 即可访问。开发环境默认账号为 **admin / admin123**；生产环境会拒绝默认密钥和默认密码。
+打开 http://localhost:8030 即可访问。开发环境默认账号为 **admin / admin123**；生产环境会拒绝默认密钥和默认密码。
 
-FastAPI 自动接口文档：http://localhost:8000/docs
+FastAPI 自动接口文档：http://localhost:8030/docs
 
 ---
 
@@ -130,7 +130,7 @@ FastAPI 自动接口文档：http://localhost:8000/docs
 ./deploy-local.sh seed --yes       # 停止服务后，备份并重置示例数据
 ```
 
-默认仅监听 `127.0.0.1:8000`。可通过命令环境变量覆盖：
+默认仅监听 `127.0.0.1:8030`。可通过命令环境变量覆盖：
 
 ```bash
 HOST=0.0.0.0 PORT=9000 ./deploy-local.sh start
@@ -149,7 +149,7 @@ HOST=0.0.0.0 PORT=9000 ./deploy-local.sh start
 ### 一键脚本
 
 ```bash
-sudo bash deploy.sh                    # 本机 8000 端口访问
+sudo bash deploy.sh                    # 本机 8030 端口访问
 sudo bash deploy.sh baby.example.com   # 绑定域名 + 内置 Caddy 自动 HTTPS
 ```
 自动完成：安装 Docker → 生成随机签名密钥、AI 数据加密密钥和管理员密码（写入 `.env`，密码仅显示一次）→ 构建并启动 →（询问）填充示例数据 →（给了域名时）启动内置 **Caddy 容器**做反向代理并**自动申请/续期 HTTPS**（无需在宿主机安装 Nginx / Certbot）。
@@ -168,7 +168,7 @@ docker compose up -d --build
 docker compose exec app python seed.py
 ```
 
-- Compose 默认只绑定 `127.0.0.1:8000`，本机访问 http://127.0.0.1:8000；需要直接从局域网访问时显式设置 `APP_BIND_ADDRESS=0.0.0.0`
+- Compose 默认只绑定 `127.0.0.1:8030`，本机访问 http://127.0.0.1:8030；需要直接从局域网访问时显式设置 `APP_BIND_ADDRESS=0.0.0.0`
 - 数据持久化在宿主机 `./data`（`baby.db` + `uploads/`）；恢复 AI 配置还必须安全保留 `.env` 中的 `DATA_ENCRYPTION_KEY`
 - 完整备份保存在 `./data/backups`；数据库升级、JSON 导入和示例数据重置前会自动备份
 - Compose 使用 `/api/ready` 检查数据库和数据目录是否可用
@@ -226,7 +226,7 @@ server {
     server_name baby.example.com;
     client_max_body_size 220m;             # 200MiB 视频加 multipart 开销
     location / {
-        proxy_pass http://127.0.0.1:8000;
+        proxy_pass http://127.0.0.1:8030;
         proxy_set_header Host $host;
         # 应用信任首个值，因此边界代理必须覆盖而不是追加客户端自带头。
         proxy_set_header X-Forwarded-For $remote_addr;

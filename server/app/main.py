@@ -13,6 +13,7 @@ from datetime import date, datetime, timezone, timedelta
 
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, Body, Query, Request, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
@@ -95,6 +96,8 @@ app.add_middleware(
     paths={"/api/import", "/api/import/validate"},
     max_bytes=settings.MAX_IMPORT_MB * 1024 * 1024,
 )
+# 直连部署（未经 Caddy/nginx）时压缩 JSON 与静态资源；有反向代理时其 encode 会跳过已压缩响应
+app.add_middleware(GZipMiddleware, minimum_size=2048)
 app.add_middleware(
     RequestBodyLimitMiddleware,
     paths={"/api/upload"},
@@ -627,7 +630,7 @@ def upload_chunk(
         raise HTTPException(400, "无效的 uploadId")
     if index < 0 or index >= total:
         raise HTTPException(400, "无效的分片编号")
-    uploads.cleanup_stale_chunks(settings.UPLOAD_DIR)
+    uploads.cleanup_stale_chunks_throttled(settings.UPLOAD_DIR)
     try:
         with uploads.upload_slot():
             manifest = uploads.bind_manifest(settings.UPLOAD_DIR, uploadId, user.id, filename, fileSize, total)
@@ -892,7 +895,7 @@ def serve_upload(
                 f.seek(start)
                 left = length
                 while left > 0:
-                    chunk = f.read(min(65536, left))
+                    chunk = f.read(min(1048576, left))
                     if not chunk:
                         break
                     left -= len(chunk)
@@ -905,7 +908,7 @@ def serve_upload(
     def whole():
         with open(path, "rb") as f:
             while True:
-                chunk = f.read(65536)
+                chunk = f.read(1048576)
                 if not chunk:
                     break
                 yield chunk
@@ -1535,7 +1538,19 @@ def delete_res(res: str, item_id: int, db: Session = Depends(get_db), user=Depen
 # ---------------- 静态资源（前端 + 上传） ----------------
 _ensure_dirs()
 
+
+class CachedStaticFiles(StaticFiles):
+    """静态资源响应带上长缓存头：入口 html 始终协商缓存（no-cache），
+    其余 js/css/图片等由 index.html 里的 ?v= 版本号控制更新，可视为 immutable。"""
+
+    def file_response(self, full_path, stat_result, scope, status_code=200):
+        response = super().file_response(full_path, stat_result, scope, status_code)
+        cache = "no-cache" if str(full_path).endswith(".html") else "public, max-age=31536000, immutable"
+        response.headers["Cache-Control"] = cache
+        return response
+
+
 CLIENT_DIR = os.environ.get("CLIENT_DIR") or os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "client"))
 if os.path.isdir(CLIENT_DIR):
-    app.mount("/", StaticFiles(directory=CLIENT_DIR, html=True), name="client")
+    app.mount("/", CachedStaticFiles(directory=CLIENT_DIR, html=True), name="client")

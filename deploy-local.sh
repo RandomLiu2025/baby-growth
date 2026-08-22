@@ -58,7 +58,7 @@ usage() {
   ./deploy-local.sh help            显示帮助
 
 可选环境变量：
-  HOST=127.0.0.1  PORT=8000  LOCAL_RUNTIME_DIR=.local_runtime
+  HOST=127.0.0.1  PORT=8030  LOCAL_RUNTIME_DIR=.local_runtime
   STARTUP_TIMEOUT=30  STOP_TIMEOUT=10
 EOF
 }

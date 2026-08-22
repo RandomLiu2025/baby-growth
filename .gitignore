@@ -19,3 +19,6 @@ venv/
 .DS_Store
 .idea/
 .vscode/
+
+# 本地一键部署的运行时目录
+.local_runtime/

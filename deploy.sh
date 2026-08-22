@@ -2,7 +2,7 @@
 #
 # 宝贝成长记 · 一键部署（Docker，内置 Caddy 自动 HTTPS，无需在宿主机安装 nginx/certbot）
 #
-#   本机访问（8000 端口）：   sudo bash deploy.sh
+#   本机访问（8030 端口）：   sudo bash deploy.sh
 #   绑定域名 + 自动 HTTPS：   sudo bash deploy.sh baby.example.com
 #
 # 脚本：安装 Docker（如缺失）→ 生成随机密钥 → 构建并启动
@@ -102,7 +102,7 @@ if [ -n "$DOMAIN" ]; then
   echo "  请确保：域名已解析到本机公网 IP，且安全组/防火墙已放行 80 与 443。"
 else
   IP="$(curl -s -m3 ifconfig.me 2>/dev/null || hostname -I 2>/dev/null | awk '{print $1}' || echo localhost)"
-  say "完成！打开 http://${IP}:8000"
+  say "完成！打开 http://${IP}:8030"
   echo "  管理员账号：admin（初始密码见 .env，请妥善保管）"
   echo "  绑定域名 + 自动 HTTPS： sudo bash deploy.sh 你的域名"
 fi

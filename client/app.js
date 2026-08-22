@@ -1,5 +1,22 @@
 /* 宝贝成长记 · 前端应用逻辑（Vue 3 全局构建，无需打包） */
 const { createApp, reactive, computed, ref, watch, onMounted, onUnmounted, nextTick } = Vue;
+
+/* echarts 体积大（约 1MB），仅成长曲线页使用：首次渲染图表时才动态加载 */
+let _echartsPromise = null;
+function loadEcharts(){
+  if(window.echarts) return Promise.resolve(window.echarts);
+  if(!_echartsPromise){
+    _echartsPromise = new Promise((resolve,reject)=>{
+      const s=document.createElement('script');
+      s.src='vendor/echarts.min.js';
+      s.onload=()=>resolve(window.echarts);
+      s.onerror=()=>{ _echartsPromise=null; reject(new Error('图表组件加载失败，请检查网络后重试')); };
+      document.head.appendChild(s);
+    });
+  }
+  return _echartsPromise;
+}
+function withEcharts(fn){ if(window.echarts){fn();return;} loadEcharts().then(fn).catch(err=>console.warn(err.message)); }
 const { albumNeedsLoad, albumPhotoCount, cloneData, diaryImageCount, diaryNeedsLoad, isVideoUrl, normalizeBootstrap, sameId } = window.BabyGrowthCompat;
 const { createActionGate, createHistoryPager, createToastStore, startupErrorMessage } = window.BabyGrowthUI;
 const { createApiClient } = window.BabyGrowthAPI;
@@ -524,10 +541,10 @@ const Growth={ setup(){
     });
   }
   const onResize=()=>{chart&&chart.resize();chart2&&chart2.resize();};
-  onMounted(()=>{render();renderPct();window.addEventListener('resize',onResize);observeReveals();});
+  onMounted(()=>{withEcharts(()=>{render();renderPct();});window.addEventListener('resize',onResize);observeReveals();});
   onUnmounted(()=>{window.removeEventListener('resize',onResize);chart&&chart.dispose();chart2&&chart2.dispose();chart=chart2=null;});
-  watch(rows,()=>nextTick(()=>{render();renderPct();}),{deep:true});
-  watch(metric,()=>nextTick(renderPct));
+  watch(rows,()=>nextTick(()=>withEcharts(()=>{render();renderPct();})),{deep:true});
+  watch(metric,()=>nextTick(()=>withEcharts(renderPct)));
   return {rows,el,pel,metric,fmtDate,ageText,state};
 }, template:`
 <section class="section container">

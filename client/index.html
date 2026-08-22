@@ -6,7 +6,7 @@
 <title>宝贝成长记 · Baby Growth</title>
 <link id="favicon" rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20100%20100%27%3E%3Ctext%20y%3D%27.9em%27%20font-size%3D%2790%27%3E%F0%9F%8D%BC%3C%2Ftext%3E%3C%2Fsvg%3E"/>
 <script src="vendor/vue.global.prod.js"></script>
-<script src="vendor/echarts.min.js"></script>
+<!-- echarts 约 1MB，改为进入成长曲线页时按需加载（见 app.js loadEcharts） -->
 <!-- 更新静态资源后递增对应 ?v= 版本号，确保免构建部署刷新浏览器缓存。 -->
 <link rel="stylesheet" href="styles.css?v=33"/>
 </head>
@@ -20,6 +20,6 @@
 <script src="defaults.js?v=2"></script>
 <script src="upload-utils.js?v=2"></script>
 <script src="components.js?v=2"></script>
-<script src="app.js?v=49"></script>
+<script src="app.js?v=50"></script>
 </body>
 </html>

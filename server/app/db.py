@@ -15,6 +15,8 @@ if settings.DATABASE_URL.startswith("sqlite"):
             cursor.execute("PRAGMA foreign_keys=ON")
             cursor.execute("PRAGMA busy_timeout=5000")
             cursor.execute("PRAGMA journal_mode=WAL")
+            # WAL 下的推荐档位：写吞吐明显提升，掉电最多丢最后一次已提交事务（项目有备份兜底）
+            cursor.execute("PRAGMA synchronous=NORMAL")
         finally:
             cursor.close()
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)

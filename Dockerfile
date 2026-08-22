@@ -25,8 +25,8 @@ ENV CLIENT_DIR=/app/client \
     DATABASE_URL=sqlite:///./data/baby.db \
     UPLOAD_DIR=./data/uploads
 
-EXPOSE 8000
+EXPOSE 8030
 
 # 首次启动自动建表并创建管理员；如需示例数据可执行： docker compose exec app python seed.py
 ENTRYPOINT ["docker-entrypoint.sh"]
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8030"]

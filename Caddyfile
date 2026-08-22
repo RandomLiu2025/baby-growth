@@ -23,8 +23,8 @@
 		max_size 220MB
 	}
 
-	# 反向代理到 app:8000
-	reverse_proxy app:8000 {
+	# 反向代理到 app:8030
+	reverse_proxy app:8030 {
 		transport http {
 			dial_timeout 10s
 			response_header_timeout 5m

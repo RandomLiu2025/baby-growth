@@ -6,6 +6,7 @@ import shutil
 import struct
 import subprocess
 import threading
+import time
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -605,6 +606,22 @@ def cleanup_stale_chunks(upload_dir: str) -> None:
                 os.remove(path)
         except OSError:
             continue
+
+
+# 分片上传每次请求都会触发清理检查；目录扫描做节流，避免高频分片时反复 stat 全部文件
+_CHUNKS_CLEANUP_INTERVAL = 60.0
+_last_chunks_cleanup = 0.0
+_chunks_cleanup_guard = threading.Lock()
+
+
+def cleanup_stale_chunks_throttled(upload_dir: str) -> None:
+    global _last_chunks_cleanup
+    with _chunks_cleanup_guard:
+        now = time.monotonic()
+        if now - _last_chunks_cleanup < _CHUNKS_CLEANUP_INTERVAL:
+            return
+        _last_chunks_cleanup = now
+    cleanup_stale_chunks(upload_dir)
 
 
 def cleanup_stale_temporary_files(upload_dir: str) -> None:
