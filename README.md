@@ -168,6 +168,23 @@ docker compose up -d --build
 docker compose exec app python seed.py
 ```
 
+### 使用 CI 发布的镜像（免本地构建）
+
+推送到 GitHub 后 Actions 会自动构建双架构镜像并同时发布到 Docker Hub 与阿里云 ACR（需在仓库 Secrets 配置 `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN`，以及可选的 `ALIYUN_REGISTRY`/`ALIYUN_NAMESPACE`/`ALIYUN_USERNAME`/`ALIYUN_PASSWORD`）。服务器上只需 `docker-compose.yml` + `Caddyfile` + `.env`：
+
+```bash
+# 国内服务器建议拉阿里云 ACR（快，且不受 Docker 镜像加速白名单限制）
+IMAGE=registry.cn-hangzhou.aliyuncs.com/<命名空间>/baby-growth:latest docker compose up -d
+
+# 海外服务器可直接用 Docker Hub
+IMAGE=fengliu1989/baby-growth:latest docker compose up -d
+
+# 后续升级
+docker compose pull && docker compose up -d
+```
+
+> 注意：配置了 DaoCloud 等镜像加速的服务器无法通过加速器拉取个人镜像，请改用上面的阿里云 ACR 地址。
+
 - Compose 默认只绑定 `127.0.0.1:8030`，本机访问 http://127.0.0.1:8030；需要直接从局域网访问时显式设置 `APP_BIND_ADDRESS=0.0.0.0`
 - 数据持久化在宿主机 `./data`（`baby.db` + `uploads/`）；恢复 AI 配置还必须安全保留 `.env` 中的 `DATA_ENCRYPTION_KEY`
 - 完整备份保存在 `./data/backups`；数据库升级、JSON 导入和示例数据重置前会自动备份
